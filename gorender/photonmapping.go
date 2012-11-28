@@ -1,12 +1,12 @@
 package gorender
 
 import (
-    "../geometry"
-    "container/list"
-    "../kd"
-    "math"
-    "math/rand"
-    "fmt"
+	"../geometry"
+	"../kd"
+	"container/list"
+	"fmt"
+	"math"
+	"math/rand"
 )
 
 ////////////////////
@@ -14,6 +14,7 @@ import (
 ////////////////////
 type PhotonHit struct {
 	Location, Photon, Incomming geometry.Vec3
+    Depth uint8
 }
 
 func (p PhotonHit) Position() geometry.Vec3 {
@@ -28,7 +29,7 @@ func CausticPhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 	}
 	if shape, distance := ClosestIntersection(scene, ray); shape != nil {
 		impact := ray.Origin.Add(ray.Direction.Mult(distance))
-		if emitter == shape {
+		if  emitter == shape {
 			// Leave the emitter first
 			nextRay := geometry.Ray{impact, ray.Direction}
 			CausticPhoton(scene, emitter, nextRay, colour, result, alpha, depth)
@@ -42,17 +43,87 @@ func CausticPhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 			outgoing = outgoing
 			//fmt.Println("Hit something else!")
 			if depth > 0 {
-				strength := colour.Mult(1.0 / (1.0 + distance))
-				result <- PhotonHit{impact, strength, ray.Direction}
+				strength := colour.Mult(1.0 / (alpha + distance))
+				result <- PhotonHit{impact, strength, ray.Direction, uint8(depth)}
 			}
 
-            // Specular objects makes reflections
+			// Specular objects makes reflections
+            /*
 			if shape.Material() == geometry.SPECULAR {
 				reflection := ray.Direction.Sub(normal.Mult(2 * outgoing.Dot(ray.Direction)))
 				reflectedRay := geometry.Ray{impact, reflection.Normalize()}
-				CausticPhoton(scene, shape, reflectedRay, colour, result, alpha, depth+1)
+				CausticPhoton(scene, shape, reflectedRay, colour, result, alpha*0.9, depth+1)
 			}
-            // Refracting objects makes refractions
+            */
+			// Refracting objects makes refractions
+            if shape.Material() == geometry.REFRACTIVE {
+                
+                var n1, n2 float64
+                var into bool
+                if normal.Dot(outgoing) < 0 {
+                    // Leave the glass
+                    n1, n2 = GLASS, AIR
+                    into = false
+                } else {
+                    n1, n2 = AIR, GLASS
+                    into = true
+                }
+                
+                factor := n1 / n2
+                cosTi  := normal.Dot(reverse)
+                sinTi  := math.Sqrt(1 - cosTi*cosTi) // sin² + cos² = 1
+                sqrt   := math.Sqrt(math.Max(1.0 - math.Pow(factor*sinTi, 2), 0))
+                // Rs
+                top    := n1*cosTi - n2*sqrt
+                bottom := n1*cosTi + n2*sqrt
+                Rs     := math.Pow(top/bottom, 2)
+                // Rp
+                top     = n1*sqrt - n2*cosTi
+                bottom  = n1*sqrt + n2*cosTi
+                Rp     := math.Pow(top/bottom, 2)
+
+                R := (Rs*Rs + Rp*Rp) / 2.0
+                T := 1.0 - R
+                
+                if math.IsNaN(R) {
+                    fmt.Printf("into: %v, sqrt: %v\n", into, sqrt)
+                    fmt.Printf("cos: %v, sin: %v\n", cosTi, sinTi)
+                    fmt.Printf("n1: %v, n2: %v\n", n1, n2)
+                    fmt.Printf("Top: %v, Bottom: %v\n", top, bottom)
+                    fmt.Printf("Rs: %v, Rp: %v\n", Rs, Rp)
+                    fmt.Printf("R: %v, T: %v\n", R, T)
+                    return
+                }
+
+                totalReflection := false
+                if n1 > n2 {
+                    maxAngle    := math.Asin(n2 / n1)
+                    actualAngle := math.Asin(sinTi)
+
+                    if actualAngle > maxAngle {
+                        totalReflection = true
+                    }
+                    totalReflection = totalReflection
+                }
+                
+                reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
+                reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
+                reflectedRay = reflectedRay
+                //CausticPhoton(scene, emitter, reflectedRay, colour, result, alpha*0.9, depth+1)
+                    
+                if true {
+                    nDotI := normal.Dot(ray.Direction);
+                    trasmittedDirection := ray.Direction.Mult(factor)
+                    term2 := factor * nDotI
+                    term3 := math.Sqrt(1 - factor*factor*(1 - nDotI*nDotI))
+                    
+                    trasmittedDirection = trasmittedDirection.Add(normal.Mult(term2 - term3))
+                    
+                    //transmittedRay := geometry.Ray{impact, ray.Direction}
+                    transmittedRay := geometry.Ray{impact, trasmittedDirection.Normalize()}
+                    CausticPhoton(scene, emitter, transmittedRay, colour, result, alpha*0.9, depth+1)
+                }
+            }
 		}
 	}
 }
@@ -62,10 +133,9 @@ func DiffusePhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 		return
 	}
 	if shape, distance := ClosestIntersection(scene, ray); shape != nil {
-		//fmt.Println("Ray from:", emitter, " hit: ", shape, "at distance", distance)
-
 		impact := ray.Origin.Add(ray.Direction.Mult(distance))
-		if emitter == shape {
+        
+		if depth == 0 && emitter == shape {
 			// Leave the emitter first
 			nextRay := geometry.Ray{impact, ray.Direction}
 			DiffusePhoton(scene, emitter, nextRay, colour, result, alpha, depth)
@@ -78,10 +148,8 @@ func DiffusePhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 			}
 			outgoing = outgoing
 			//fmt.Println("Hit something else!")
-			if depth >= 0 {
-				strength := colour.Mult(1.0 / (1.0 + distance))
-				result <- PhotonHit{impact, strength, ray.Direction}
-			}
+            strength := colour.Mult(alpha / (1 + distance))
+            result <- PhotonHit{impact, strength, ray.Direction, uint8(depth)}
 
 			if shape.Material() == geometry.DIFFUSE {
 				// Random bounce for color bleeding
@@ -89,11 +157,12 @@ func DiffusePhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 				v := u.Cross(normal).Normalize()
 				bounce := u.Mult(rand.NormFloat64() * 0.5).Add(outgoing).Add(v.Mult(rand.NormFloat64() * 0.5))
 				bounceRay := geometry.Ray{impact, bounce.Normalize()}
-				DiffusePhoton(scene, shape, bounceRay, colour.MultVec(shape.Colour()).Mult(alpha), result, alpha*0.66, depth+1)
-            }
+                bleedColour := colour.MultVec(shape.Colour()).Mult(alpha / (1 + distance))
+				DiffusePhoton(scene, shape, bounceRay, bleedColour, result, alpha*0.66, depth+1)
+			}
 			// Store Shadow Photons
 			shadowRay := geometry.Ray{impact, ray.Direction}
-			DiffusePhoton(scene, shape, shadowRay, geometry.Vec3{0, 0, 0}, result, alpha*0.9, depth+1)
+			DiffusePhoton(scene, shape, shadowRay, geometry.Vec3{0, 0, 0}, result, alpha*0.66, depth+1)
 		}
 	}
 }
@@ -117,7 +186,6 @@ func PhotonChunk(scene *list.List, traceFunc RayFunc, shape geometry.Shape, fact
 			math.Sin(theta)*math.Sin(phi)
 
 		direction := geometry.Vec3{x, y, z}
-		//fmt.Println("X, Y, Z:", x, y, z);
 		ray := geometry.Ray{shape.Position(), direction.Normalize()}
 		traceFunc(scene, shape, ray, shape.Emission(), result, 1.0, 0)
 	}
@@ -128,14 +196,14 @@ func PhotonMapping(scene *list.List, factor int, rayFunc RayFunc) *list.List {
 
 	result := list.New()
 	photons := factor * factor * 2
-	chunks := 4
+	chunks := 8
 	chunksize := photons / chunks
 
 	for e := scene.Front(); e != nil; e = e.Next() {
 		shape := e.Value.(geometry.Shape)
 		hits := make(chan PhotonHit)
 		done := make(chan bool)
-		if shape.Emission().X > 0 {
+		if shape.Emission().Abs() > 0 {
 			for start := 0; start < chunks; start++ {
 				go PhotonChunk(scene, rayFunc, shape, factor, start, chunksize, hits, done)
 			}
@@ -151,13 +219,12 @@ func PhotonMapping(scene *list.List, factor int, rayFunc RayFunc) *list.List {
 			const tick = 10000
 			fmt.Printf("Tracing %v photons through the scene ", photons)
 			for photon := range hits {
-				//fmt.Println(photon)
 				result.PushBack(photon)
 				count++
 				if count%tick == 0 {
 					fmt.Printf(".")
 					if count%(10*tick) == 0 {
-						fmt.Printf("\r                                                         \r")
+						clearLine()
 						fmt.Printf("Tracing %v photons through the scene ", photons)
 					}
 				}
@@ -170,10 +237,10 @@ func PhotonMapping(scene *list.List, factor int, rayFunc RayFunc) *list.List {
 
 func GenerateMaps(scene *list.List) (*kd.KDNode, *kd.KDNode) {
 	caustics := PhotonMapping(scene, 768, CausticPhoton)
-	globals := PhotonMapping(scene, 384, DiffusePhoton)
-    fmt.Println("Building KD-trees...")
+	globals := PhotonMapping(scene, 128, DiffusePhoton)
+	fmt.Printf("Building KD-trees ...")
 
-    globalsChannel := kd.AsyncNew(globals, 3)
-    causticsChannel := kd.AsyncNew(caustics, 3)
+	globalsChannel := kd.AsyncNew(globals, 3)
+	causticsChannel := kd.AsyncNew(caustics, 3)
 	return <-globalsChannel, <-causticsChannel
 }

@@ -105,6 +105,15 @@ func AsyncNew(items *list.List, maxDimension int) (<-chan *KDNode) {
     return channel
 }
 
+// Helper function to conditionally branch with go
+func condGo(condition bool, f func()) {
+    if condition {
+        go f()
+    } else {
+        f()
+    }
+}
+
 // Creates a new KD-tree by taking a *list.List of KDValues
 // Works by finding the median in every dimension and
 // recursivly creating KD-trees as children untill the list is empty.
@@ -144,11 +153,7 @@ func New(items *list.List, maxDimension int) *KDNode {
 		right := make(chan *KDNode, 1)
 
         // Branch if high enough in the tree
-        if depth < 8 {
-            go create(l[:median], left, depth+1)
-        } else {
-            create(l[:median], left, depth+1)
-        }
+        condGo(depth < 4, func() { create(l[:median], left, depth+1) })
 		create(l[median+1:], right, depth+1)
 
 		result <- &KDNode{value, depth % maxDimension, <-left, <-right}

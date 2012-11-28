@@ -17,7 +17,7 @@ func main() {
 
 	input := flag.String("in", "default", "The file describing the scene")
 	cores := flag.Int("cores", 2, "The number of cores to use on the machine")
-	chunks := flag.Int("chunks", 4, "The number of chunks to use for parallelism")
+	chunks := flag.Int("chunks", 8, "The number of chunks to use for parallelism")
 	fov := flag.Int("fov", 90, "The field of view of the rendered image")
 	cols := flag.Int("w", 800, "The width in pixels of the rendered image")
 	rows := flag.Int("h", 600, "The height in pixels of the rendered image")
@@ -41,7 +41,7 @@ func main() {
 	runtime.GOMAXPROCS(wantedCPUs)
 
 	if wantedCPUs > *chunks {
-		*chunks = wantedCPUs
+		*chunks = wantedCPUs * 2 
 	}
 
 	if *rows%*chunks != 0 {

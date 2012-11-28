@@ -16,7 +16,6 @@ import (
 //////////////////
 // Utility
 //////////////////
-
 func PrintDuration(t time.Duration) {
 	if hours := math.Floor(t.Hours()); hours > 0 {
 		fmt.Printf("%vh ", int(hours))
@@ -25,8 +24,12 @@ func PrintDuration(t time.Duration) {
 		fmt.Printf("%1.0vm ", int(minutes))
 	}
 	if seconds := math.Mod(t.Seconds(), 60); seconds > 0 {
-		fmt.Printf("%2.3vs\n", seconds)
+		fmt.Printf("%2.3vs", seconds)
 	}
+}
+
+func clearLine() {
+    fmt.Printf("\r                                                                                                          \r")
 }
 
 func ClosestIntersection(shapes *list.List, ray geometry.Ray) (geometry.Shape, float64) {
@@ -34,7 +37,7 @@ func ClosestIntersection(shapes *list.List, ray geometry.Ray) (geometry.Shape, f
 	bestHit := math.Inf(+1)
 	for e := shapes.Front(); e != nil; e = e.Next() {
 		shape := e.Value.(geometry.Shape)
-		if hit := shape.Intersects(ray); hit > 0 && hit < bestHit {
+		if hit := shape.Intersects(ray); hit > 1e-10 && hit < bestHit {
 			bestHit = hit
 			closest = shape
 		}
@@ -49,36 +52,10 @@ type Result struct {
 
 const (
 	AIR   = 1.0
-	GLASS = 1.6
+	GLASS = 1.5
 )
 
-func EmitterSampling(point geometry.Vec3, object geometry.Shape, scene *list.List) geometry.Vec3 {
-	shapeNormal := object.NormalDir(point).Normalize()
-	var u, v, delta, normal, direction, sum geometry.Vec3
-	const jitter = 0.3
-	for e := scene.Front(); e != nil; e = e.Next() {
-		shape := e.Value.(geometry.Shape)
-		// Is it a light source?
-		if shape.Emission().X > 0 && shape != object {
-			// Is it visible from our point? Add jitter for soft shadows
-			normal = shape.NormalDir(point).Mult(-1)
-			// /*
-			u = normal.Cross(point.Mult(-1).Normalize()).Normalize()
-			v = u.Cross(normal).Normalize()
-			delta = u.Mult(rand.NormFloat64() * jitter).Add(v.Mult(rand.NormFloat64() * jitter))
-			direction = normal.Add(delta).Normalize()
-			//*/
-			//direction := normal.Normalize()
-			ray := geometry.Ray{point, direction}
-			if item, distance := ClosestIntersection(scene, ray); item == shape {
-				sum = sum.Add(item.Emission().Mult(item.Size() * shapeNormal.Dot(direction) / (1 + distance)))
-			}
-		}
-	}
-	return sum
-}
-
-func MonteCarloPixel(results chan Result, scene *geometry.Scene, photonMap *kd.KDNode, start, rows int) {
+func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, start, rows int) {
 	samples := Config.NumRays
 	var px, py, dy, dx float64
 	var direction, contribution, delta, colourSamples geometry.Vec3
@@ -93,7 +70,7 @@ func MonteCarloPixel(results chan Result, scene *geometry.Scene, photonMap *kd.K
 				delta = geometry.Vec3{px + dx, py + dy, 0}
 				direction = delta.Sub(scene.Camera.Origin).Normalize()
 
-				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene.Objects, photonMap, 0, 1.0)
+				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0)
 				colourSamples = colourSamples.Add(contribution.Mult(1.0 / float64(samples)))
 			}
 			results <- Result{x, y, colourSamples}
@@ -137,6 +114,8 @@ func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
 				data[y][x] = colour
 			}
 		}
+        clearLine()
+        fmt.Printf("Post Processing %3.0f%%", 100*float64(iteration)/float64(depth))
 		source, data = data, source
 	}
 	return source
@@ -158,15 +137,16 @@ func Render(scene geometry.Scene) image.Image {
 
 	startTime := time.Now()
 	globals, caustics := GenerateMaps(scene.Objects)
-    
-    fmt.Printf("Diffuse Map depth: %v Caustics Map depth: %v\n", globals.Depth(), caustics.Depth())
+    fmt.Println(" Done!")
+	fmt.Printf("Diffuse Map depth: %v Caustics Map depth: %v\n", globals.Depth(), caustics.Depth())
 	fmt.Printf("Photon Maps Done. Generation took: ")
 	stopTime := time.Now()
 	PrintDuration(stopTime.Sub(startTime))
+    fmt.Println()
 
 	startTime = time.Now()
 	for y := 0; y < scene.Rows; y += workload {
-		go MonteCarloPixel(pixels, &scene, caustics, y, workload)
+		go MonteCarloPixel(pixels, &scene, globals, caustics, y, workload)
 	}
 
 	// Write targets for after effects
@@ -182,14 +162,19 @@ func Render(scene geometry.Scene) image.Image {
 	var highest, lowest geometry.Vec3
 	var highValue, lowValue float64
 	var memory runtime.MemStats
-	for i := 0; i < scene.Rows*scene.Cols; i++ {
+    numPixels := scene.Rows*scene.Cols
+	for i := 0; i < numPixels; i++ {
 		// Print progress information every 500 pixels
-		if i%500 == 0 {
+		if i % 500 == 0 {
+            //clearLine()
 			fmt.Printf("\rRendering %6.2f%%", 100*float64(i)/float64(scene.Rows*scene.Cols))
 			so_far = time.Now().Sub(startTime)
-			fmt.Printf(" (%0.1f pps ", float64(i)/so_far.Seconds())
+            remaining := time.Duration((so_far.Seconds()/float64(i)) * float64(numPixels-i)) * time.Second
+            fmt.Printf(" (Time Remaining: ")
+            PrintDuration(remaining)
+            fmt.Printf(" at %0.1f pps)                \r", float64(i)/so_far.Seconds())
 			runtime.ReadMemStats(&memory)
-			fmt.Printf("M/F/kBs/S/L: %d/%d/%d/%d/%d)", memory.Mallocs, memory.Frees, memory.TotalAlloc/1024, memory.Sys/1024, memory.Lookups)
+			//fmt.Printf("M/F/kBs/S/L: %d/%d/%d/%d/%d)", memory.Mallocs, memory.Frees, memory.TotalAlloc/1024, memory.Sys/1024, memory.Lookups)
 		}
 		pixel := <-pixels
 
@@ -204,9 +189,9 @@ func Render(scene geometry.Scene) image.Image {
 		data[pixel.y][pixel.x] = pixel.colour.CLAMPF()
 		peaks[pixel.y][pixel.x] = pixel.colour.PEAKS(0.8)
 	}
+    clearLine()
 	fmt.Println("\rRendering 100.00%")
 
-	fmt.Printf("Post Processing ...")
 	bloomed := BloomFilter(peaks, Config.BloomFactor)
 
 	for y := 0; y < len(data); y++ {
@@ -217,13 +202,15 @@ func Render(scene geometry.Scene) image.Image {
 		}
 	}
 	stopTime = time.Now()
-	fmt.Println("\rDone!               ")
+    clearLine()
+	fmt.Println("\rDone!")
 	fmt.Printf("Brightest pixel: %v intensity: %v\n", highest, highValue)
 	fmt.Printf("Dimmest pixel: %v intensity: %v\n", lowest, lowValue)
 
 	// Print duration
 	fmt.Printf("Rendering took ")
 	PrintDuration(stopTime.Sub(startTime))
+    fmt.Println()
 
 	return img.SubImage(img.Bounds())
 }

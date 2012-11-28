@@ -18,7 +18,7 @@ func ParseScene(filename string, width, height, fov float64, cols, rows int) Sce
 
 	shapes := list.New()
     
-	shapes.PushBack(Sphere{3, Vec3{1, 1, -9}, Vec3{0, 0, 0}, Vec3{1, 0, 0}, DIFFUSE})
+	shapes.PushBack(Sphere{3, Vec3{5, 1, -7}, Vec3{0, 0, 0}, Vec3{0, 0, 0}, REFRACTIVE})
 	shapes.PushBack(Sphere{5, Vec3{-5, 3, -15}, Vec3{0, 0, 0}, Vec3{1, 1, 1}, SPECULAR})
 	shapes.PushBack(Plane{Vec3{0, -2, -10}, Vec3{0, 0, 0}, Vec3{0, 0, 0.9}, Vec3{0, 10, 1}.Normalize(), DIFFUSE})
 	shapes.PushBack(Plane{Vec3{-10, 0, 0}, Vec3{0, 0, 0}, Vec3{0, 0.9, 0}, Vec3{1, 0, 0}.Normalize(), DIFFUSE})
