@@ -236,8 +236,8 @@ func PhotonMapping(scene *list.List, factor int, rayFunc RayFunc) *list.List {
 }
 
 func GenerateMaps(scene *list.List) (*kd.KDNode, *kd.KDNode) {
-	caustics := PhotonMapping(scene, 768, CausticPhoton)
-	globals := PhotonMapping(scene, 128, DiffusePhoton)
+	caustics := PhotonMapping(scene, 128, CausticPhoton)
+	globals := PhotonMapping(scene, 16, DiffusePhoton)
 	fmt.Printf("Building KD-trees ...")
 
 	globalsChannel := kd.AsyncNew(globals, 3)

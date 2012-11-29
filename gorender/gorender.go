@@ -37,7 +37,7 @@ func ClosestIntersection(shapes *list.List, ray geometry.Ray) (geometry.Shape, f
 	bestHit := math.Inf(+1)
 	for e := shapes.Front(); e != nil; e = e.Next() {
 		shape := e.Value.(geometry.Shape)
-		if hit := shape.Intersects(ray); hit > 1e-10 && hit < bestHit {
+		if hit := shape.Intersects(ray); hit > 0 && hit < bestHit {
 			bestHit = hit
 			closest = shape
 		}
