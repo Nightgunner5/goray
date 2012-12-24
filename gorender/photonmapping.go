@@ -84,6 +84,8 @@ func CausticPhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
 
                 R := (Rs*Rs + Rp*Rp) / 2.0
                 T := 1.0 - R
+                R  = math.Pow((n1 - n2) / (n1 + n2), 2)
+                T  = 1.0 - R
                 
                 if math.IsNaN(R) {
                     fmt.Printf("into: %v, sqrt: %v\n", into, sqrt)
@@ -106,12 +108,17 @@ func CausticPhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
                     totalReflection = totalReflection
                 }
                 
-                reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
-                reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-                reflectedRay = reflectedRay
-                //CausticPhoton(scene, emitter, reflectedRay, colour, result, alpha*0.9, depth+1)
-                    
-                if true {
+                if totalReflection {
+                    reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
+                    reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
+                    reflectedRay = reflectedRay
+                    //CausticPhoton(scene, emitter, reflectedRay, colour, result, alpha*0.9, depth+1)
+                } else {
+                    reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
+                    reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
+                    reflectedRay = reflectedRay
+                    //CausticPhoton(scene, emitter, reflectedRay, colour.Mult(R), result, alpha*0.9, depth+1)
+                
                     nDotI := normal.Dot(ray.Direction);
                     trasmittedDirection := ray.Direction.Mult(factor)
                     term2 := factor * nDotI
@@ -119,9 +126,8 @@ func CausticPhoton(scene *list.List, emitter geometry.Shape, ray geometry.Ray, c
                     
                     trasmittedDirection = trasmittedDirection.Add(normal.Mult(term2 - term3))
                     
-                    //transmittedRay := geometry.Ray{impact, ray.Direction}
                     transmittedRay := geometry.Ray{impact, trasmittedDirection.Normalize()}
-                    CausticPhoton(scene, emitter, transmittedRay, colour, result, alpha*0.9, depth+1)
+                    CausticPhoton(scene, emitter, transmittedRay, colour.Mult(T), result, alpha*0.9, depth+1)
                 }
             }
 		}

@@ -24,7 +24,7 @@ func main() {
 	output := flag.String("out", "out.png", "Output file for the rendered scene")
 	bloom := flag.Int("bloom", 10, "The number of iteration to run the bloom filter")
 	mindepth := flag.Int("depth", 2, "The minimum recursion depth used for the rays")
-	rays := flag.Int("rays", 16, "The number of rays used to sample each pixel")
+	rays := flag.Int("rays", 10, "The number of rays used to sample each pixel")
 	gamma := flag.Float64("gamma", 2.2, "The factor to use for gamme correction")
 	// Profiling information
 	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile informaion to file")

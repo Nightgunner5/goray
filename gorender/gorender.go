@@ -114,8 +114,7 @@ func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
 				data[y][x] = colour
 			}
 		}
-        clearLine()
-        fmt.Printf("Post Processing %3.0f%%", 100*float64(iteration)/float64(depth))
+        fmt.Printf("\rPost Processing %3.0f%%   \r", 100*float64(iteration)/float64(depth))
 		source, data = data, source
 	}
 	return source
@@ -189,7 +188,6 @@ func Render(scene geometry.Scene) image.Image {
 		data[pixel.y][pixel.x] = pixel.colour.CLAMPF()
 		peaks[pixel.y][pixel.x] = pixel.colour.PEAKS(0.8)
 	}
-    clearLine()
 	fmt.Println("\rRendering 100.00%")
 
 	bloomed := BloomFilter(peaks, Config.BloomFactor)

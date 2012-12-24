@@ -170,7 +170,7 @@ func New(items *list.List, maxDimension int) *KDNode {
 // irrelevant subtrees are cut of.
 func (tree *KDNode) Neighbors(point KDValue, r float64) *list.List {
     if tree == nil {
-        return nil
+        return list.New()
     }
     result := list.New()
     
@@ -183,14 +183,14 @@ func (tree *KDNode) Neighbors(point KDValue, r float64) *list.List {
     split := tree.Split
     // Is the leftmost point to the left of us?
     if comparingValue(tree, split) > comparingValue(point, split) - r {
-        if left := tree.Left.Neighbors(point, r); left != nil {
+        if left := tree.Left.Neighbors(point, r); left.Len() > 0 {
             result.PushBackList(left)
         }
     }
 
     // Is the rightmost point to the right of us?
     if comparingValue(tree, split) < comparingValue(point, split) + r {
-        if right := tree.Right.Neighbors(point, r); right != nil {
+        if right := tree.Right.Neighbors(point, r); right.Len() > 0 {
             result.PushBackList(right)
         }
     }
