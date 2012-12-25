@@ -16,7 +16,7 @@ func (v Vec3) Abs() float64 {
 }
 
 func (v Vec3) Position() Vec3 {
-    return v
+	return v
 }
 
 func (v Vec3) Truncate() Vec3 {
@@ -64,13 +64,13 @@ func (v Vec3) Cross(other Vec3) Vec3 {
 }
 
 func (me Vec3) Distance(other Vec3) float64 {
-    dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
-    return math.Sqrt(dx*dx + dy*dy + dz*dz)
+	dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
+	return math.Sqrt(dx*dx + dy*dy + dz*dz)
 }
 
 func (me Vec3) Distance2(other Vec3) float64 {
-    dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
-    return dx*dx + dy*dy + dz*dz
+	dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
+	return dx*dx + dy*dy + dz*dz
 }
 
 /////////////////////////

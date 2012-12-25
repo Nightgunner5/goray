@@ -1,8 +1,6 @@
 package main
 
 import (
-	"./geometry"
-	"./gorender"
 	"flag"
 	"fmt"
 	"image/png"
@@ -11,6 +9,8 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"silven.nu/goray/geometry"
+	"silven.nu/goray/gorender"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 	runtime.GOMAXPROCS(wantedCPUs)
 
 	if wantedCPUs > *chunks {
-		*chunks = wantedCPUs * 2 
+		*chunks = wantedCPUs * 2
 	}
 
 	if *rows%*chunks != 0 {

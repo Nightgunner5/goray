@@ -1,88 +1,83 @@
 package gorender
 
 import (
-	"../geometry"
-	"../kd"
-	"container/list"
 	"fmt"
 	"math"
 	"math/rand"
+	"silven.nu/goray/geometry"
+	"silven.nu/goray/kd"
 )
 
-func EmitterSampling(point, normal geometry.Vec3, shapes *list.List) geometry.Vec3 {
-    incommingLight := geometry.Vec3{0, 0, 0}
-    
-    for e := shapes.Front(); e != nil; e = e.Next() {
-		shape := e.Value.(geometry.Shape)
-		
+func EmitterSampling(point, normal geometry.Vec3, shapes []geometry.Shape) geometry.Vec3 {
+	incommingLight := geometry.Vec3{0, 0, 0}
+
+	for _, shape := range shapes {
 		if shape.Emission().Abs() > 0 {
-		    // It's a light source
-		    direction := shape.NormalDir(point).Mult(-1)
+			// It's a light source
+			direction := shape.NormalDir(point).Mult(-1)
 			u := direction.Cross(normal).Normalize()
 			v := direction.Cross(u).Normalize()
-			
-		    direction = direction.Add(u.Mult(rand.NormFloat64() * 0.3)).Add(v.Mult(rand.NormFloat64() * 0.3));
-		    ray := geometry.Ray{point, direction.Normalize()};
-		    
-		    if object, distance := ClosestIntersection(shapes, ray); object == shape {
-		        incommingLight = incommingLight.Add(object.Emission().Mult(direction.Dot(normal) / (1 + distance)))
-		    }
+
+			direction = direction.Add(u.Mult(rand.NormFloat64() * 0.3)).Add(v.Mult(rand.NormFloat64() * 0.3))
+			ray := geometry.Ray{point, direction.Normalize()}
+
+			if object, distance := ClosestIntersection(shapes, ray); object == shape {
+				incommingLight = incommingLight.Add(object.Emission().Mult(direction.Dot(normal) / (1 + distance)))
+			}
 		}
 	}
 	return incommingLight
 }
-
 
 func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, depth int, alpha float64) geometry.Vec3 {
 
 	if depth > Config.MinDepth && rand.Float64() > alpha {
 		return geometry.Vec3{0, 0, 0}
 	}
-	
+
 	if shape, distance := ClosestIntersection(scene.Objects, ray); shape != nil {
 		impact := ray.Origin.Add(ray.Direction.Mult(distance))
 		normal := shape.NormalDir(impact).Normalize()
 		reverse := ray.Direction.Mult(-1)
 
-        contribution := shape.Emission();
+		contribution := shape.Emission()
 		outgoing := normal
 		if normal.Dot(reverse) < 0 {
 			outgoing = normal.Mult(-1)
 		}
-		
+
 		if shape.Material() == geometry.DIFFUSE {
-		    causticLight := geometry.Vec3{0, 0, 0}
-		    directLight := geometry.Vec3{0, 0, 0}
-		    
-		    nodes := causticsMap.Neighbors(impact, 0.1)
-            for e := nodes.Front(); e != nil; e = e.Next() {
-                photon := e.Value.(*kd.KDNode).Value.(PhotonHit)
-                dist := photon.Location.Distance(impact)
-                light := photon.Photon.Mult(outgoing.Dot(photon.Incomming.Mult(-1 / math.Pi*(1 + dist))))
-                causticLight = causticLight.Add(light)
-            }
-            if nodes.Len() > 0 {
-                causticLight = causticLight.Mult(1.0 / float64(nodes.Len()))
-            }
-            
-            
-            directLight = EmitterSampling(impact, normal, scene.Objects)
-		    
+			causticLight := geometry.Vec3{0, 0, 0}
+			directLight := geometry.Vec3{0, 0, 0}
+
+			nodes := causticsMap.Neighbors(impact, 0.1)
+			for _, e := range nodes {
+				photon := causticPhotons[e.Position]
+				dist := photon.Location.Distance(impact)
+				light := photon.Photon.Mult(outgoing.Dot(photon.Incomming.Mult(-1 / math.Pi * (1 + dist))))
+				causticLight = causticLight.Add(light)
+			}
+			if len(nodes) > 0 {
+				causticLight = causticLight.Mult(1.0 / float64(len(nodes)))
+			}
+
+			directLight = EmitterSampling(impact, normal, scene.Objects)
+
 			u := normal.Cross(reverse).Normalize()
 			v := u.Cross(normal).Normalize()
-			
+
 			bounceDirection := u.Mult(rand.NormFloat64() * 0.5).Add(outgoing).Add(v.Mult(rand.NormFloat64() * 0.5))
 			bounceRay := geometry.Ray{impact, bounceDirection.Normalize()}
-            indirectLight := Radiance(bounceRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9)
-            diffuseLight := shape.Colour().MultVec(directLight.Add(indirectLight)).Add(causticLight).Mult(outgoing.Dot(reverse))
-            
+			indirectLight := Radiance(bounceRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9)
+			diffuseLight := shape.Colour().MultVec(directLight.Add(indirectLight)).Add(causticLight).Mult(outgoing.Dot(reverse))
+
 			return contribution.Add(diffuseLight)
 
 		}
 		if shape.Material() == geometry.SPECULAR {
 			reflectionDirection := ray.Direction.Sub(normal.Mult(2 * outgoing.Dot(ray.Direction)))
 			reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-            incommingLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.99)
+			incommingLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.99)
 			return incommingLight.Mult(outgoing.Dot(reverse))
 		}
 
@@ -98,7 +93,7 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 			factor := n1 / n2
 			cosTi := normal.Dot(reverse)
 			sinTi := math.Sqrt(1 - cosTi*cosTi) // sin² + cos² = 1
-			sqrt := math.Sqrt(math.Max(1.0 - math.Pow(factor*sinTi, 2), 0))
+			sqrt := math.Sqrt(math.Max(1.0-math.Pow(factor*sinTi, 2), 0))
 			// Rs
 			top := n1*cosTi - n2*sqrt
 			bottom := n1*cosTi + n2*sqrt
@@ -111,7 +106,7 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 			R := (Rs*Rs + Rp*Rp) / 2.0
 
 			// Approximate:
-            R = math.Pow((n1 - n2) / (n1 + n2), 2);
+			R = math.Pow((n1-n2)/(n1+n2), 2)
 			// SmallPT formula
 			//R = R + (1 - R) * math.Pow(1 - cosTi, 5)
 			T := 1.0 - R
@@ -136,16 +131,16 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 				}
 				totalReflection = totalReflection
 			}
-			
+
 			if totalReflection {
-    			reflectionDirection := ray.Direction.Sub(outgoing.Mult(2 * outgoing.Dot(ray.Direction)))
-		        reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-                return Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9)
-            } else {
-    			reflectionDirection := ray.Direction.Sub(outgoing.Mult(2 * outgoing.Dot(ray.Direction)))
-		        reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-                reflectedLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9).Mult(R)
-                
+				reflectionDirection := ray.Direction.Sub(outgoing.Mult(2 * outgoing.Dot(ray.Direction)))
+				reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
+				return Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9)
+			} else {
+				reflectionDirection := ray.Direction.Sub(outgoing.Mult(2 * outgoing.Dot(ray.Direction)))
+				reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
+				reflectedLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9).Mult(R)
+
 				nDotI := normal.Dot(ray.Direction)
 				trasmittedDirection := ray.Direction.Mult(factor)
 				term2 := factor * nDotI
@@ -221,4 +216,3 @@ func RadianceOLD(ray geometry.Ray, scene *list.List, photonMap *kd.KDNode, depth
 	return geometry.Vec3{0, 0, 0}
 }
 */
-

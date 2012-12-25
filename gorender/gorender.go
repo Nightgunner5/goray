@@ -1,15 +1,13 @@
 package gorender
 
 import (
-	"../geometry"
-	"../kd"
-	"container/list"
 	"fmt"
 	"image"
 	"image/color"
 	"math"
 	"math/rand"
-	"runtime"
+	"silven.nu/goray/geometry"
+	"silven.nu/goray/kd"
 	"time"
 )
 
@@ -29,14 +27,13 @@ func PrintDuration(t time.Duration) {
 }
 
 func clearLine() {
-    fmt.Printf("\r                                                                                                          \r")
+	fmt.Printf("\r                                                                                                          \r")
 }
 
-func ClosestIntersection(shapes *list.List, ray geometry.Ray) (geometry.Shape, float64) {
+func ClosestIntersection(shapes []geometry.Shape, ray geometry.Ray) (geometry.Shape, float64) {
 	var closest geometry.Shape
 	bestHit := math.Inf(+1)
-	for e := shapes.Front(); e != nil; e = e.Next() {
-		shape := e.Value.(geometry.Shape)
+	for _, shape := range shapes {
 		if hit := shape.Intersects(ray); hit > 0 && hit < bestHit {
 			bestHit = hit
 			closest = shape
@@ -114,7 +111,7 @@ func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
 				data[y][x] = colour
 			}
 		}
-        fmt.Printf("\rPost Processing %3.0f%%   \r", 100*float64(iteration)/float64(depth))
+		fmt.Printf("\rPost Processing %3.0f%%   \r", 100*float64(iteration)/float64(depth))
 		source, data = data, source
 	}
 	return source
@@ -136,12 +133,12 @@ func Render(scene geometry.Scene) image.Image {
 
 	startTime := time.Now()
 	globals, caustics := GenerateMaps(scene.Objects)
-    fmt.Println(" Done!")
+	fmt.Println(" Done!")
 	fmt.Printf("Diffuse Map depth: %v Caustics Map depth: %v\n", globals.Depth(), caustics.Depth())
 	fmt.Printf("Photon Maps Done. Generation took: ")
 	stopTime := time.Now()
 	PrintDuration(stopTime.Sub(startTime))
-    fmt.Println()
+	fmt.Println()
 
 	startTime = time.Now()
 	for y := 0; y < scene.Rows; y += workload {
@@ -160,20 +157,17 @@ func Render(scene geometry.Scene) image.Image {
 	var so_far time.Duration
 	var highest, lowest geometry.Vec3
 	var highValue, lowValue float64
-	var memory runtime.MemStats
-    numPixels := scene.Rows*scene.Cols
+	numPixels := scene.Rows * scene.Cols
 	for i := 0; i < numPixels; i++ {
 		// Print progress information every 500 pixels
-		if i % 500 == 0 {
-            //clearLine()
+		if i%500 == 0 {
+			//clearLine()
 			fmt.Printf("\rRendering %6.2f%%", 100*float64(i)/float64(scene.Rows*scene.Cols))
 			so_far = time.Now().Sub(startTime)
-            remaining := time.Duration((so_far.Seconds()/float64(i)) * float64(numPixels-i)) * time.Second
-            fmt.Printf(" (Time Remaining: ")
-            PrintDuration(remaining)
-            fmt.Printf(" at %0.1f pps)                \r", float64(i)/so_far.Seconds())
-			runtime.ReadMemStats(&memory)
-			//fmt.Printf("M/F/kBs/S/L: %d/%d/%d/%d/%d)", memory.Mallocs, memory.Frees, memory.TotalAlloc/1024, memory.Sys/1024, memory.Lookups)
+			remaining := time.Duration((so_far.Seconds()/float64(i))*float64(numPixels-i)) * time.Second
+			fmt.Printf(" (Time Remaining: ")
+			PrintDuration(remaining)
+			fmt.Printf(" at %0.1f pps)                \r", float64(i)/so_far.Seconds())
 		}
 		pixel := <-pixels
 
@@ -196,11 +190,11 @@ func Render(scene geometry.Scene) image.Image {
 		for x := 0; x < len(data[0]); x++ {
 			colour := data[y][x].Add(bloomed[y][x])
 			colour = CorrectColours(colour).CLAMP()
-			img.Set(x, y, color.NRGBA{uint8(colour.X), uint8(colour.Y), uint8(colour.Z), 255})
+			img.SetNRGBA(x, y, color.NRGBA{uint8(colour.X), uint8(colour.Y), uint8(colour.Z), 255})
 		}
 	}
 	stopTime = time.Now()
-    clearLine()
+	clearLine()
 	fmt.Println("\rDone!")
 	fmt.Printf("Brightest pixel: %v intensity: %v\n", highest, highValue)
 	fmt.Printf("Dimmest pixel: %v intensity: %v\n", lowest, lowValue)
@@ -208,7 +202,7 @@ func Render(scene geometry.Scene) image.Image {
 	// Print duration
 	fmt.Printf("Rendering took ")
 	PrintDuration(stopTime.Sub(startTime))
-    fmt.Println()
+	fmt.Println()
 
 	return img.SubImage(img.Bounds())
 }
