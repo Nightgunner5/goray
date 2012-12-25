@@ -52,7 +52,7 @@ const (
 	GLASS = 1.5
 )
 
-func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, start, rows int) {
+func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, start, rows int, rand *rand.Rand) {
 	samples := Config.NumRays
 	var px, py, dy, dx float64
 	var direction, contribution, delta, colourSamples geometry.Vec3
@@ -67,7 +67,7 @@ func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, cau
 				delta = geometry.Vec3{px + dx, py + dy, 0}
 				direction = delta.Sub(scene.Camera.Origin).Normalize()
 
-				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0)
+				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0, rand)
 				colourSamples = colourSamples.Add(contribution.Mult(1.0 / float64(samples)))
 			}
 			results <- Result{x, y, colourSamples}
@@ -142,7 +142,7 @@ func Render(scene geometry.Scene) image.Image {
 
 	startTime = time.Now()
 	for y := 0; y < scene.Rows; y += workload {
-		go MonteCarloPixel(pixels, &scene, globals, caustics, y, workload)
+		go MonteCarloPixel(pixels, &scene, globals, caustics, y, workload, rand.New(rand.NewSource(rand.Int63())))
 	}
 
 	// Write targets for after effects
@@ -161,7 +161,6 @@ func Render(scene geometry.Scene) image.Image {
 	for i := 0; i < numPixels; i++ {
 		// Print progress information every 500 pixels
 		if i%500 == 0 {
-			//clearLine()
 			fmt.Printf("\rRendering %6.2f%%", 100*float64(i)/float64(scene.Rows*scene.Cols))
 			so_far = time.Now().Sub(startTime)
 			remaining := time.Duration((so_far.Seconds()/float64(i))*float64(numPixels-i)) * time.Second
@@ -204,5 +203,5 @@ func Render(scene geometry.Scene) image.Image {
 	PrintDuration(stopTime.Sub(startTime))
 	fmt.Println()
 
-	return img.SubImage(img.Bounds())
+	return img
 }

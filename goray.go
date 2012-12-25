@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -13,35 +14,44 @@ import (
 	"silven.nu/goray/gorender"
 )
 
-func main() {
-
-	input := flag.String("in", "default", "The file describing the scene")
-	cores := flag.Int("cores", 2, "The number of cores to use on the machine")
-	chunks := flag.Int("chunks", 8, "The number of chunks to use for parallelism")
-	fov := flag.Int("fov", 90, "The field of view of the rendered image")
-	cols := flag.Int("w", 800, "The width in pixels of the rendered image")
-	rows := flag.Int("h", 600, "The height in pixels of the rendered image")
-	output := flag.String("out", "out.png", "Output file for the rendered scene")
-	bloom := flag.Int("bloom", 10, "The number of iteration to run the bloom filter")
-	mindepth := flag.Int("depth", 2, "The minimum recursion depth used for the rays")
-	rays := flag.Int("rays", 10, "The number of rays used to sample each pixel")
-	gamma := flag.Float64("gamma", 2.2, "The factor to use for gamme correction")
+var (
+	input    = new(string) //flag.String("in", "default", "The file describing the scene")
+	cores    = flag.Int("cores", 2, "The number of cores to use on the machine")
+	chunks   = flag.Int("chunks", 8, "The number of chunks to use for parallelism")
+	fov      = flag.Int("fov", 90, "The field of view of the rendered image")
+	cols     = flag.Int("w", 800, "The width in pixels of the rendered image")
+	rows     = flag.Int("h", 600, "The height in pixels of the rendered image")
+	seed     = flag.Int64("seed", 1, "The seed for the random number generator")
+	output   = flag.String("out", "out.png", "Output file for the rendered scene")
+	bloom    = flag.Int("bloom", 10, "The number of iteration to run the bloom filter")
+	mindepth = flag.Int("depth", 2, "The minimum recursion depth used for the rays")
+	rays     = flag.Int("rays", 10, "The number of rays used to sample each pixel")
+	gamma    = flag.Float64("gamma", 2.2, "The factor to use for gamma correction")
 	// Profiling information
-	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile informaion to file")
-	memprofile := flag.String("memprofile", "", "Write memory profile informaion to file")
+	cpuprofile = flag.String("cpuprofile", "", "Write cpu profile informaion to file")
+	memprofile = flag.String("memprofile", "", "Write memory profile informaion to file")
+)
+
+func main() {
 	flag.Parse()
+
+	rand.Seed(*seed)
 
 	gorender.Config.NumRays = *rays
 	gorender.Config.BloomFactor = *bloom
 	gorender.Config.MinDepth = *mindepth
 	gorender.Config.GammaFactor = *gamma
 
-	wantedCPUs := int(math.Max(math.Min(float64(*cores), float64(runtime.NumCPU())), 1))
+	wantedCPUs := *cores
+	if wantedCPUs < 1 {
+		wantedCPUs = 1
+	}
 	fmt.Printf("Running on %v/%v CPU cores\n", wantedCPUs, runtime.NumCPU())
 	runtime.GOMAXPROCS(wantedCPUs)
 
 	if wantedCPUs > *chunks {
 		*chunks = wantedCPUs * 2
+		log.Printf("Warning: changed chunks to %d to accomodate cores setting", *chunks)
 	}
 
 	if *rows%*chunks != 0 {

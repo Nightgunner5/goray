@@ -39,12 +39,12 @@ func ParseScene(filename string, width, height, fov float64, cols, rows int) Sce
 	*/
 
 	/*
-	shapes = append(shapes, Plane{Vec3{0, -2, 0}, Vec3{0, 0, 0}, Vec3{0, 0, 0.9}, Vec3{0, 10, 1}.Normalize(), DIFFUSE})
-	shapes = append(shapes, Plane{Vec3{-10, 0, 0}, Vec3{0, 0, 0}, Vec3{0, 0.3, 0}, Vec3{1, 0, 0}.Normalize(), DIFFUSE})
-	shapes = append(shapes, Plane{Vec3{10, 0, 0}, Vec3{0, 0, 0}, Vec3{0.4, 0, 0.4}, Vec3{-1, 0, 0}.Normalize(), DIFFUSE})
-	shapes = append(shapes, Plane{Vec3{0, 0, -15}, Vec3{0, 0, 0}, Vec3{0.4, 0.4, 0.4}, Vec3{0, 0, 1}.Normalize(), DIFFUSE})
-	shapes = append(shapes, Plane{Vec3{0, 10, 0}, Vec3{0, 0, 0}, Vec3{0, 0.6, 0.6}, Vec3{0, -1, 0}.Normalize(), DIFFUSE})
-	shapes = append(shapes, Sphere{1, Vec3{0, 5, -10}, Vec3{1, 1, 1}, Vec3{1, 1, 1}, DIFFUSE})
+		shapes = append(shapes, Plane{Vec3{0, -2, 0}, Vec3{0, 0, 0}, Vec3{0, 0, 0.9}, Vec3{0, 10, 1}.Normalize(), DIFFUSE})
+		shapes = append(shapes, Plane{Vec3{-10, 0, 0}, Vec3{0, 0, 0}, Vec3{0, 0.3, 0}, Vec3{1, 0, 0}.Normalize(), DIFFUSE})
+		shapes = append(shapes, Plane{Vec3{10, 0, 0}, Vec3{0, 0, 0}, Vec3{0.4, 0, 0.4}, Vec3{-1, 0, 0}.Normalize(), DIFFUSE})
+		shapes = append(shapes, Plane{Vec3{0, 0, -15}, Vec3{0, 0, 0}, Vec3{0.4, 0.4, 0.4}, Vec3{0, 0, 1}.Normalize(), DIFFUSE})
+		shapes = append(shapes, Plane{Vec3{0, 10, 0}, Vec3{0, 0, 0}, Vec3{0, 0.6, 0.6}, Vec3{0, -1, 0}.Normalize(), DIFFUSE})
+		shapes = append(shapes, Sphere{1, Vec3{0, 5, -10}, Vec3{1, 1, 1}, Vec3{1, 1, 1}, DIFFUSE})
 	*/
 	near := math.Abs(fov / math.Tan(fov/2.0))
 
