@@ -2,6 +2,7 @@ package geometry
 
 import (
 	"math"
+	"unsafe"
 )
 
 /////////////////////////
@@ -27,8 +28,20 @@ func (v Vec3) Truncate() Vec3 {
 }
 
 func (v Vec3) Normalize() Vec3 {
-	abs := v.Abs()
-	return Vec3{v.X / abs, v.Y / abs, v.Z / abs}
+	// http://en.wikipedia.org/wiki/Fast_inverse_square_root
+	const (
+		magic      = 0x5fe6eb50c7b537a9
+		iterations = 3
+	)
+
+	y := (v.X*v.X + v.Y*v.Y + v.Z*v.Z)
+	x2 := y / 2
+	i := (*uint64)(unsafe.Pointer(&y))
+	*i = magic - (*i >> 1)
+	for i := 0; i < iterations; i++ {
+		y = y * (1.5 - (x2 * y * y))
+	}
+	return Vec3{v.X * y, v.Y * y, v.Z * y}
 }
 
 func (v Vec3) Add(other Vec3) Vec3 {
