@@ -1,7 +1,7 @@
 package kd
 
 import (
-	"silven.nu/goray/geometry"
+	"github.com/Nightgunner5/goray/geometry"
 	"sort"
 )
 

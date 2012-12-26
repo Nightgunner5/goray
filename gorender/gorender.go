@@ -2,12 +2,12 @@ package gorender
 
 import (
 	"fmt"
+	"github.com/Nightgunner5/goray/geometry"
+	"github.com/Nightgunner5/goray/kd"
 	"image"
 	"image/color"
 	"math"
 	"math/rand"
-	"silven.nu/goray/geometry"
-	"silven.nu/goray/kd"
 	"time"
 )
 

@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Nightgunner5/goray/geometry"
+	"github.com/Nightgunner5/goray/gorender"
 	"image/png"
 	"log"
 	"math"
@@ -10,8 +12,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"silven.nu/goray/geometry"
-	"silven.nu/goray/gorender"
 )
 
 var (

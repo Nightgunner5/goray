@@ -2,10 +2,10 @@ package gorender
 
 import (
 	"fmt"
+	"github.com/Nightgunner5/goray/geometry"
+	"github.com/Nightgunner5/goray/kd"
 	"math"
 	"math/rand"
-	"silven.nu/goray/geometry"
-	"silven.nu/goray/kd"
 )
 
 ////////////////////
