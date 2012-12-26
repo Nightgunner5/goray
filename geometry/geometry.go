@@ -43,7 +43,7 @@ type Square struct {
 	width, height float64
 }
 
-func (p Plane) Intersects(r Ray) float64 {
+func (p *Plane) Intersects(r Ray) float64 {
 	epsilon := 1e-12
 
 	// Orthogonal
@@ -54,11 +54,11 @@ func (p Plane) Intersects(r Ray) float64 {
 	return p.position.Sub(r.Origin).Dot(p.normal) / dot
 }
 
-func (s Square) Intersects(r Ray) float64 {
+func (s *Square) Intersects(r Ray) float64 {
 	return 0.0
 }
 
-func (s Sphere) Intersects(ray Ray) float64 {
+func (s *Sphere) Intersects(ray Ray) float64 {
 	difference := s.position.Sub(ray.Origin)
 	epsilon := 1e-5
 	dot := difference.Dot(ray.Direction)
@@ -71,61 +71,62 @@ func (s Sphere) Intersects(ray Ray) float64 {
 	hypotenuse = math.Sqrt(hypotenuse)
 	if diff := dot - hypotenuse; diff > epsilon {
 		return diff
-	} else if diff := dot + hypotenuse; diff > epsilon {
+	}
+	if diff := dot + hypotenuse; diff > epsilon {
 		return diff
 	}
 	return math.Inf(+1)
 }
 
-func (s Sphere) Colour() Vec3 {
+func (s *Sphere) Colour() Vec3 {
 	return s.colour
 }
 
-func (s Sphere) Position() Vec3 {
+func (s *Sphere) Position() Vec3 {
 	return s.position
 }
 
-func (p Plane) Position() Vec3 {
+func (p *Plane) Position() Vec3 {
 	return p.position
 }
 
-func (p Plane) Colour() Vec3 {
+func (p *Plane) Colour() Vec3 {
 	return p.colour
 }
 
-func (s Sphere) Material() int {
+func (s *Sphere) Material() int {
 	return s.materialType
 }
 
-func (p Plane) Material() int {
+func (p *Plane) Material() int {
 	return p.materialType
 }
 
-func (s Sphere) Emission() Vec3 {
+func (s *Sphere) Emission() Vec3 {
 	return s.emission
 }
 
-func (p Plane) Emission() Vec3 {
+func (p *Plane) Emission() Vec3 {
 	return p.emission
 }
 
-func (s Sphere) NormalDir(point Vec3) Vec3 {
+func (s *Sphere) NormalDir(point Vec3) Vec3 {
 	return point.Sub(s.position)
 }
 
-func (p Plane) NormalDir(point Vec3) Vec3 {
+func (p *Plane) NormalDir(point Vec3) Vec3 {
 	return p.normal
 }
 
-func (s Square) Size() float64 {
+func (s *Square) Size() float64 {
 	return s.width * s.height
 }
 
-func (s Sphere) Size() float64 {
+func (s *Sphere) Size() float64 {
 	return math.Pi * s.radius * s.radius
 }
 
-func (p Plane) Size() float64 {
+func (p *Plane) Size() float64 {
 	return math.Inf(+1)
 }
 
