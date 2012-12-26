@@ -8,10 +8,10 @@ import (
 // Utility
 /////////////////////////
 func AdjustEpsilon(e float64, x float64) float64 {
-	if math.Abs(x) > e {
-		return x
+	if -e < x && x < e {
+		return 0
 	}
-	return 0.0
+	return x
 }
 
 /////////////////////////
@@ -48,7 +48,7 @@ func (p *Plane) Intersects(r Ray) float64 {
 
 	// Orthogonal
 	dot := r.Direction.Dot(p.normal)
-	if math.Abs(dot) < epsilon {
+	if -epsilon < dot && dot < epsilon {
 		return math.Inf(+1)
 	}
 	return p.position.Sub(r.Origin).Dot(p.normal) / dot
