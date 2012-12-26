@@ -12,7 +12,7 @@ func EmitterSampling(point, normal geometry.Vec3, shapes []geometry.Shape, rand 
 	incommingLight := geometry.Vec3{0, 0, 0}
 
 	for _, shape := range shapes {
-		if shape.Emission().Abs() > 0 {
+		if !shape.Emission().IsZero() {
 			// It's a light source
 			direction := shape.NormalDir(point).Mult(-1)
 			u := direction.Cross(normal).Normalize()

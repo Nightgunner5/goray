@@ -63,6 +63,10 @@ func (v Vec3) Cross(other Vec3) Vec3 {
 		v.X*other.Y - v.Y*other.X}
 }
 
+func (v Vec3) IsZero() bool {
+	return v.X == 0 && v.Y == 0 || v.Z == 0
+}
+
 func (me Vec3) Distance(other Vec3) float64 {
 	dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
 	return math.Sqrt(dx*dx + dy*dy + dz*dz)
