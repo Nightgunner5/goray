@@ -64,7 +64,7 @@ func (v Vec3) Cross(other Vec3) Vec3 {
 }
 
 func (v Vec3) IsZero() bool {
-	return v.X == 0 && v.Y == 0 || v.Z == 0
+	return v.X == 0 && v.Y == 0 && v.Z == 0
 }
 
 func (me Vec3) Distance(other Vec3) float64 {
