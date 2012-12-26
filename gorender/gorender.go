@@ -30,8 +30,8 @@ func clearLine() {
 	fmt.Printf("\r                                                                                                          \r")
 }
 
-func ClosestIntersection(shapes []geometry.Shape, ray geometry.Ray) (geometry.Shape, float64) {
-	var closest geometry.Shape
+func ClosestIntersection(shapes []*geometry.Shape, ray geometry.Ray) (*geometry.Shape, float64) {
+	var closest *geometry.Shape
 	bestHit := math.Inf(+1)
 	for _, shape := range shapes {
 		if hit := shape.Intersects(ray); hit > 0 && hit < bestHit {

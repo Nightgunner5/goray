@@ -8,11 +8,11 @@ import (
 	"math/rand"
 )
 
-func EmitterSampling(point, normal geometry.Vec3, shapes []geometry.Shape, rand *rand.Rand) geometry.Vec3 {
+func EmitterSampling(point, normal geometry.Vec3, shapes []*geometry.Shape, rand *rand.Rand) geometry.Vec3 {
 	incommingLight := geometry.Vec3{0, 0, 0}
 
 	for _, shape := range shapes {
-		if !shape.Emission().IsZero() {
+		if !shape.Emission.IsZero() {
 			// It's a light source
 			direction := shape.NormalDir(point).Mult(-1)
 			u := direction.Cross(normal).Normalize()
@@ -22,7 +22,7 @@ func EmitterSampling(point, normal geometry.Vec3, shapes []geometry.Shape, rand 
 			ray := geometry.Ray{point, direction.Normalize()}
 
 			if object, distance := ClosestIntersection(shapes, ray); object == shape {
-				incommingLight = incommingLight.Add(object.Emission().Mult(direction.Dot(normal) / (1 + distance)))
+				incommingLight.AddInPlace(object.Emission.Mult(direction.Dot(normal) / (1 + distance)))
 			}
 		}
 	}
@@ -40,22 +40,21 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 		normal := shape.NormalDir(impact).Normalize()
 		reverse := ray.Direction.Mult(-1)
 
-		contribution := shape.Emission()
+		contribution := shape.Emission
 		outgoing := normal
 		if normal.Dot(reverse) < 0 {
 			outgoing = normal.Mult(-1)
 		}
 
-		if shape.Material() == geometry.DIFFUSE {
-			causticLight := geometry.Vec3{0, 0, 0}
-			directLight := geometry.Vec3{0, 0, 0}
+		if shape.Material == geometry.DIFFUSE {
+			var causticLight, directLight geometry.Vec3
 
 			nodes := causticsMap.Neighbors(impact, 0.1)
 			for _, e := range nodes {
 				photon := causticPhotons[e.Position]
 				dist := photon.Location.Distance(impact)
 				light := photon.Photon.Mult(outgoing.Dot(photon.Incomming.Mult(-1 / math.Pi * (1 + dist))))
-				causticLight = causticLight.Add(light)
+				causticLight.AddInPlace(light)
 			}
 			if len(nodes) > 0 {
 				causticLight = causticLight.Mult(1.0 / float64(len(nodes)))
@@ -69,19 +68,19 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 			bounceDirection := u.Mult(rand.NormFloat64() * 0.5).Add(outgoing).Add(v.Mult(rand.NormFloat64() * 0.5))
 			bounceRay := geometry.Ray{impact, bounceDirection.Normalize()}
 			indirectLight := Radiance(bounceRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9, rand)
-			diffuseLight := shape.Colour().MultVec(directLight.Add(indirectLight)).Add(causticLight).Mult(outgoing.Dot(reverse))
+			diffuseLight := shape.Colour.MultVec(directLight.Add(indirectLight)).Add(causticLight).Mult(outgoing.Dot(reverse))
 
 			return contribution.Add(diffuseLight)
 
 		}
-		if shape.Material() == geometry.SPECULAR {
+		if shape.Material == geometry.SPECULAR {
 			reflectionDirection := ray.Direction.Sub(normal.Mult(2 * outgoing.Dot(ray.Direction)))
 			reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
 			incommingLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.99, rand)
 			return incommingLight.Mult(outgoing.Dot(reverse))
 		}
 
-		if shape.Material() == geometry.REFRACTIVE {
+		if shape.Material == geometry.REFRACTIVE {
 			var n1, n2 float64
 			if normal.Dot(outgoing) < 0 {
 				// Leave the glass

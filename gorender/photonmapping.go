@@ -20,9 +20,9 @@ func (p PhotonHit) Position() geometry.Vec3 {
 	return p.Location
 }
 
-type RayFunc func([]geometry.Shape, geometry.Shape, geometry.Ray, geometry.Vec3, chan<- PhotonHit, float64, int, *rand.Rand)
+type RayFunc func([]*geometry.Shape, *geometry.Shape, geometry.Ray, geometry.Vec3, chan<- PhotonHit, float64, int, *rand.Rand)
 
-func CausticPhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.Ray, colour geometry.Vec3, result chan<- PhotonHit, alpha float64, depth int, rand *rand.Rand) {
+func CausticPhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometry.Ray, colour geometry.Vec3, result chan<- PhotonHit, alpha float64, depth int, rand *rand.Rand) {
 	if rand.Float64() > alpha {
 		return
 	}
@@ -54,8 +54,7 @@ func CausticPhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.
 			}*/
 
 			// Refracting objects makes refractions
-			if shape.Material() == geometry.REFRACTIVE {
-
+			if shape.Material == geometry.REFRACTIVE {
 				var n1, n2 float64
 				var into bool
 				if normal.Dot(outgoing) < 0 {
@@ -132,7 +131,7 @@ func CausticPhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.
 	}
 }
 
-func DiffusePhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.Ray, colour geometry.Vec3, result chan<- PhotonHit, alpha float64, depth int, rand *rand.Rand) {
+func DiffusePhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometry.Ray, colour geometry.Vec3, result chan<- PhotonHit, alpha float64, depth int, rand *rand.Rand) {
 	if rand.Float64() > alpha {
 		return
 	}
@@ -155,13 +154,13 @@ func DiffusePhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.
 			strength := colour.Mult(alpha / (1 + distance))
 			result <- PhotonHit{impact, strength, ray.Direction, uint8(depth)}
 
-			if shape.Material() == geometry.DIFFUSE {
+			if shape.Material == geometry.DIFFUSE {
 				// Random bounce for color bleeding
 				u := normal.Cross(reverse).Normalize()
 				v := u.Cross(normal).Normalize()
 				bounce := u.Mult(rand.NormFloat64() * 0.5).Add(outgoing).Add(v.Mult(rand.NormFloat64() * 0.5))
 				bounceRay := geometry.Ray{impact, bounce.Normalize()}
-				bleedColour := colour.MultVec(shape.Colour()).Mult(alpha / (1 + distance))
+				bleedColour := colour.MultVec(shape.Colour).Mult(alpha / (1 + distance))
 				DiffusePhoton(scene, shape, bounceRay, bleedColour, result, alpha*0.66, depth+1, rand)
 			}
 			// Store Shadow Photons
@@ -171,7 +170,7 @@ func DiffusePhoton(scene []geometry.Shape, emitter geometry.Shape, ray geometry.
 	}
 }
 
-func PhotonChunk(scene []geometry.Shape, traceFunc RayFunc, shape geometry.Shape, factor, start, chunksize int, result chan<- PhotonHit, done chan<- bool, rand *rand.Rand) {
+func PhotonChunk(scene []*geometry.Shape, traceFunc RayFunc, shape *geometry.Shape, factor, start, chunksize int, result chan<- PhotonHit, done chan<- bool, rand *rand.Rand) {
 	for i := 0; i < chunksize; i++ {
 		longitude := (start*chunksize + i) / factor
 		latitude := (start*chunksize + i) % factor
@@ -189,13 +188,13 @@ func PhotonChunk(scene []geometry.Shape, traceFunc RayFunc, shape geometry.Shape
 			math.Sin(theta)*math.Sin(phi)
 
 		direction := geometry.Vec3{x, y, z}
-		ray := geometry.Ray{shape.Position(), direction.Normalize()}
-		traceFunc(scene, shape, ray, shape.Emission(), result, 1.0, 0, rand)
+		ray := geometry.Ray{shape.Position, direction.Normalize()}
+		traceFunc(scene, shape, ray, shape.Emission, result, 1.0, 0, rand)
 	}
 	done <- true
 }
 
-func PhotonMapping(scene []geometry.Shape, factor int, rayFunc RayFunc) ([]geometry.Vec3, []PhotonHit) {
+func PhotonMapping(scene []*geometry.Shape, factor int, rayFunc RayFunc) ([]geometry.Vec3, []PhotonHit) {
 	var (
 		points []geometry.Vec3
 		result []PhotonHit
@@ -207,7 +206,7 @@ func PhotonMapping(scene []geometry.Shape, factor int, rayFunc RayFunc) ([]geome
 	for _, shape := range scene {
 		hits := make(chan PhotonHit)
 		done := make(chan bool)
-		if shape.Emission().Abs() > 0 {
+		if !shape.Emission.IsZero() {
 			for start := 0; start < chunks; start++ {
 				go PhotonChunk(scene, rayFunc, shape, factor, start, chunksize, hits, done, rand.New(rand.NewSource(rand.Int63())))
 			}
@@ -242,7 +241,7 @@ func PhotonMapping(scene []geometry.Shape, factor int, rayFunc RayFunc) ([]geome
 
 var causticPhotons map[geometry.Vec3]PhotonHit
 
-func GenerateMaps(scene []geometry.Shape) (*kd.KDNode, *kd.KDNode) {
+func GenerateMaps(scene []*geometry.Shape) (*kd.KDNode, *kd.KDNode) {
 	caustics, caustics_ := PhotonMapping(scene, 128, CausticPhoton)
 	globals, _ := PhotonMapping(scene, 16, DiffusePhoton)
 	fmt.Printf("Building KD-trees ...")

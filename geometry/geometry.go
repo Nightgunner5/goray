@@ -17,49 +17,68 @@ func AdjustEpsilon(e float64, x float64) float64 {
 /////////////////////////
 // Geometry
 /////////////////////////
-type Shape interface {
-	Intersects(ray Ray) float64
-	Material() int
-	Colour() Vec3
-	Emission() Vec3
-	Position() Vec3
-	NormalDir(point Vec3) Vec3
-	Size() float64
+type Shape struct {
+	intersects func(*Shape, Ray) float64
+	Material   int
+	Colour     Vec3
+	Emission   Vec3
+	Position   Vec3
+	normalDir  func(*Shape, Vec3) Vec3
+	Size       float64
+
+	normal Vec3
+	radius float64
 }
 
-type Sphere struct {
-	radius                     float64
-	position, emission, colour Vec3
-	materialType               int
+func (s *Shape) Intersects(ray Ray) float64 {
+	return s.intersects(s, ray)
 }
 
-type Plane struct {
-	position, emission, colour, normal Vec3
-	materialType                       int
+func (s *Shape) NormalDir(point Vec3) Vec3 {
+	return s.normalDir(s, point)
 }
 
-type Square struct {
-	Plane
-	width, height float64
+func Sphere(radius float64, position, emission, colour Vec3, materialType int) *Shape {
+	return &Shape{
+		intersects: sphereIntersects,
+		Material:   materialType,
+		Colour:     colour,
+		Emission:   emission,
+		Position:   position,
+		normalDir:  sphereNormal,
+		Size:       math.Pi * radius * radius,
+
+		radius: radius,
+	}
 }
 
-func (p *Plane) Intersects(r Ray) float64 {
+func Plane(position, emission, colour, normal Vec3, materialType int) *Shape {
+	return &Shape{
+		intersects: planeIntersects,
+		Material:   materialType,
+		Colour:     colour,
+		Emission:   emission,
+		Position:   position,
+		normalDir:  planeNormal,
+		Size:       math.Inf(+1),
+
+		normal: normal,
+	}
+}
+
+func planeIntersects(s *Shape, r Ray) float64 {
 	const epsilon = 1e-12
 
 	// Orthogonal
-	dot := r.Direction.Dot(p.normal)
+	dot := r.Direction.Dot(s.normal)
 	if -epsilon < dot && dot < epsilon {
 		return math.Inf(+1)
 	}
-	return p.position.Sub(r.Origin).Dot(p.normal) / dot
+	return s.Position.Sub(r.Origin).Dot(s.normal) / dot
 }
 
-func (s *Square) Intersects(r Ray) float64 {
-	return 0.0
-}
-
-func (s *Sphere) Intersects(ray Ray) float64 {
-	difference := s.position.Sub(ray.Origin)
+func sphereIntersects(s *Shape, ray Ray) float64 {
+	difference := s.Position.Sub(ray.Origin)
 	const epsilon = 1e-5
 	dot := difference.Dot(ray.Direction)
 	hypotenuse := dot*dot - difference.Dot(difference) + s.radius*s.radius
@@ -78,56 +97,12 @@ func (s *Sphere) Intersects(ray Ray) float64 {
 	return math.Inf(+1)
 }
 
-func (s *Sphere) Colour() Vec3 {
-	return s.colour
+func sphereNormal(s *Shape, point Vec3) Vec3 {
+	return point.Sub(s.Position)
 }
 
-func (s *Sphere) Position() Vec3 {
-	return s.position
-}
-
-func (p *Plane) Position() Vec3 {
-	return p.position
-}
-
-func (p *Plane) Colour() Vec3 {
-	return p.colour
-}
-
-func (s *Sphere) Material() int {
-	return s.materialType
-}
-
-func (p *Plane) Material() int {
-	return p.materialType
-}
-
-func (s *Sphere) Emission() Vec3 {
-	return s.emission
-}
-
-func (p *Plane) Emission() Vec3 {
-	return p.emission
-}
-
-func (s *Sphere) NormalDir(point Vec3) Vec3 {
-	return point.Sub(s.position)
-}
-
-func (p *Plane) NormalDir(point Vec3) Vec3 {
-	return p.normal
-}
-
-func (s *Square) Size() float64 {
-	return s.width * s.height
-}
-
-func (s *Sphere) Size() float64 {
-	return math.Pi * s.radius * s.radius
-}
-
-func (p *Plane) Size() float64 {
-	return math.Inf(+1)
+func planeNormal(s *Shape, point Vec3) Vec3 {
+	return s.normal
 }
 
 /////////////////////////
