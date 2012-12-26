@@ -88,7 +88,7 @@ func planeIntersects(s *Shape, r Ray) float64 {
 	if -epsilon < dot && dot < epsilon {
 		return math.Inf(+1)
 	}
-	return s.Position.Sub(r.Origin).Dot(s.normal) / dot
+	return s.Position.SubDot(r.Origin, s.normal) / dot
 }
 
 func sphereIntersects(s *Shape, ray Ray) float64 {

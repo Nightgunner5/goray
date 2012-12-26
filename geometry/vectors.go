@@ -65,6 +65,10 @@ func (v Vec3) Dot(other Vec3) float64 {
 	return v.X*other.X + v.Y*other.Y + v.Z*other.Z
 }
 
+func (v Vec3) SubDot(o, n Vec3) float64 {
+	return (v.X-o.X)*n.X + (v.Y-o.Y)*n.Y + (v.Z-o.Z)*n.Z
+}
+
 func (v Vec3) Cross(other Vec3) Vec3 {
 	return Vec3{v.Y*other.Z - v.Z*other.Y,
 		v.Z*other.X - v.X*other.Z,
