@@ -44,7 +44,7 @@ type Square struct {
 }
 
 func (p *Plane) Intersects(r Ray) float64 {
-	epsilon := 1e-12
+	const epsilon = 1e-12
 
 	// Orthogonal
 	dot := r.Direction.Dot(p.normal)
@@ -60,7 +60,7 @@ func (s *Square) Intersects(r Ray) float64 {
 
 func (s *Sphere) Intersects(ray Ray) float64 {
 	difference := s.position.Sub(ray.Origin)
-	epsilon := 1e-5
+	const epsilon = 1e-5
 	dot := difference.Dot(ray.Direction)
 	hypotenuse := dot*dot - difference.Dot(difference) + s.radius*s.radius
 

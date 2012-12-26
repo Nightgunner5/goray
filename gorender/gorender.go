@@ -55,22 +55,24 @@ const (
 func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, start, rows int, rand *rand.Rand) {
 	samples := Config.NumRays
 	var px, py, dy, dx float64
-	var direction, contribution, delta, colourSamples geometry.Vec3
+	var direction, contribution geometry.Vec3
 
 	for y := start; y < start+rows; y++ {
 		py = scene.Height - scene.Height*2*float64(y)/float64(scene.Rows)
 		for x := 0; x < scene.Cols; x++ {
 			px = -scene.Width + scene.Width*2*float64(x)/float64(scene.Cols)
-			colourSamples = geometry.Vec3{0, 0, 0}
+			var colourSamples geometry.Vec3
 			for sample := 0; sample < samples; sample++ {
 				dy, dx = rand.Float64()*scene.PixH, rand.Float64()*scene.PixW
-				delta = geometry.Vec3{px + dx, py + dy, 0}
-				direction = delta.Sub(scene.Camera.Origin).Normalize()
+				direction = geometry.Vec3{
+					px + dx - scene.Camera.Origin.X,
+					py + dy - scene.Camera.Origin.Y,
+					-scene.Camera.Origin.Z}.Normalize()
 
 				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0, rand)
-				colourSamples = colourSamples.Add(contribution.Mult(1.0 / float64(samples)))
+				colourSamples.AddInPlace(contribution)
 			}
-			results <- Result{x, y, colourSamples}
+			results <- Result{x, y, colourSamples.Mult(1.0 / float64(samples))}
 		}
 	}
 }
@@ -102,13 +104,13 @@ func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
 	for iteration := 0; iteration < depth; iteration++ {
 		for y := box_width; y < len(img)-box_width; y++ {
 			for x := box_width; x < len(img[0])-box_width; x++ {
-				colour := geometry.Vec3{0, 0, 0}
+				var colour geometry.Vec3
 				for dy := -box_width; dy <= box_width; dy++ {
 					for dx := -box_width; dx <= box_width; dx++ {
-						colour = colour.Add(source[y+dy][x+dx].Mult(factor))
+						colour.AddInPlace(source[y+dy][x+dx])
 					}
 				}
-				data[y][x] = colour
+				data[y][x] = colour.Mult(factor)
 			}
 		}
 		fmt.Printf("\rPost Processing %3.0f%%   \r", 100*float64(iteration)/float64(depth))
