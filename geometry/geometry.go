@@ -18,51 +18,65 @@ func AdjustEpsilon(e float64, x float64) float64 {
 // Geometry
 /////////////////////////
 type Shape struct {
-	intersects func(*Shape, Ray) float64
-	Material   int
-	Colour     Vec3
-	Emission   Vec3
-	Position   Vec3
-	normalDir  func(*Shape, Vec3) Vec3
-	Size       float64
+	Material int
+	Colour   Vec3
+	Emission Vec3
+	Position Vec3
+	Size     float64
 
 	normal Vec3
 	radius float64
+	kind   int
 }
 
+const (
+	kindSphere = iota
+	kindPlane
+)
+
 func (s *Shape) Intersects(ray Ray) float64 {
-	return s.intersects(s, ray)
+	switch s.kind {
+	case kindSphere:
+		return sphereIntersects(s, ray)
+	case kindPlane:
+		return planeIntersects(s, ray)
+	}
+	panic("unreachable")
 }
 
 func (s *Shape) NormalDir(point Vec3) Vec3 {
-	return s.normalDir(s, point)
+	switch s.kind {
+	case kindSphere:
+		return sphereNormal(s, point)
+	case kindPlane:
+		return planeNormal(s, point)
+	}
+	panic("unreachable")
 }
 
 func Sphere(radius float64, position, emission, colour Vec3, materialType int) *Shape {
 	return &Shape{
-		intersects: sphereIntersects,
-		Material:   materialType,
-		Colour:     colour,
-		Emission:   emission,
-		Position:   position,
-		normalDir:  sphereNormal,
-		Size:       math.Pi * radius * radius,
+		Material: materialType,
+		Colour:   colour,
+		Emission: emission,
+		Position: position,
+		Size:     math.Pi * radius * radius,
 
 		radius: radius,
+		kind:   kindSphere,
 	}
 }
 
 func Plane(position, emission, colour, normal Vec3, materialType int) *Shape {
 	return &Shape{
-		intersects: planeIntersects,
-		Material:   materialType,
-		Colour:     colour,
-		Emission:   emission,
-		Position:   position,
-		normalDir:  planeNormal,
-		Size:       math.Inf(+1),
+		Material: materialType,
+		Colour:   colour,
+		Emission: emission,
+		Position: position,
+		Size:     math.Inf(+1),
 
 		normal: normal,
+		kind:   kindPlane,
 	}
 }
 
