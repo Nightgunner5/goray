@@ -9,7 +9,7 @@ import (
 )
 
 func EmitterSampling(point, normal geometry.Vec3, shapes []*geometry.Shape, rand *rand.Rand) geometry.Vec3 {
-	incommingLight := geometry.Vec3{0, 0, 0}
+	incomingLight := geometry.Vec3{0, 0, 0}
 
 	for _, shape := range shapes {
 		if !shape.Emission.IsZero() {
@@ -22,11 +22,11 @@ func EmitterSampling(point, normal geometry.Vec3, shapes []*geometry.Shape, rand
 			ray := geometry.Ray{point, direction.Normalize()}
 
 			if object, distance := ClosestIntersection(shapes, ray); object == shape {
-				incommingLight.AddInPlace(object.Emission.Mult(direction.Dot(normal) / (1 + distance)))
+				incomingLight.AddInPlace(object.Emission.Mult(direction.Dot(normal) / (1 + distance)))
 			}
 		}
 	}
-	return incommingLight
+	return incomingLight
 }
 
 func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, depth int, alpha float64, rand *rand.Rand) geometry.Vec3 {
@@ -62,10 +62,14 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 
 			directLight = EmitterSampling(impact, normal, scene.Objects, rand)
 
-			u := normal.Cross(reverse).Normalize()
-			v := u.Cross(normal).Normalize()
+			u := normal.Cross(reverse).Normalize().Mult(rand.NormFloat64() * 0.5)
+			v := u.Cross(normal).Normalize().Mult(rand.NormFloat64() * 0.5)
 
-			bounceDirection := u.Mult(rand.NormFloat64() * 0.5).Add(outgoing).Add(v.Mult(rand.NormFloat64() * 0.5))
+			bounceDirection := geometry.Vec3{
+				u.X + outgoing.X + v.X,
+				u.Y + outgoing.Y + v.Y,
+				u.Z + outgoing.Z + v.Z,
+			}
 			bounceRay := geometry.Ray{impact, bounceDirection.Normalize()}
 			indirectLight := Radiance(bounceRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.9, rand)
 			dot := outgoing.Dot(reverse)
@@ -81,8 +85,8 @@ func Radiance(ray geometry.Ray, scene *geometry.Scene, diffuseMap, causticsMap *
 		if shape.Material == geometry.SPECULAR {
 			reflectionDirection := ray.Direction.Sub(normal.Mult(2 * outgoing.Dot(ray.Direction)))
 			reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-			incommingLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.99, rand)
-			return incommingLight.Mult(outgoing.Dot(reverse))
+			incomingLight := Radiance(reflectedRay, scene, diffuseMap, causticsMap, depth+1, alpha*0.99, rand)
+			return incomingLight.Mult(outgoing.Dot(reverse))
 		}
 
 		if shape.Material == geometry.REFRACTIVE {

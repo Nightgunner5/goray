@@ -34,7 +34,7 @@ const (
 	kindPlane
 )
 
-func (s *Shape) Intersects(ray Ray) float64 {
+func (s *Shape) Intersects(ray *Ray) float64 {
 	switch s.kind {
 	case kindSphere:
 		return sphereIntersects(s, ray)
@@ -80,25 +80,27 @@ func Plane(position, emission, colour, normal Vec3, materialType int) *Shape {
 	}
 }
 
-func planeIntersects(s *Shape, r Ray) float64 {
+var positiveInfinity = math.Inf(+1)
+
+func planeIntersects(s *Shape, r *Ray) float64 {
 	const epsilon = 1e-12
 
 	// Orthogonal
 	dot := r.Direction.Dot(s.normal)
 	if -epsilon < dot && dot < epsilon {
-		return math.Inf(+1)
+		return positiveInfinity
 	}
 	return s.Position.SubDot(r.Origin, s.normal) / dot
 }
 
-func sphereIntersects(s *Shape, ray Ray) float64 {
+func sphereIntersects(s *Shape, ray *Ray) float64 {
 	difference := s.Position.Sub(ray.Origin)
 	const epsilon = 1e-5
 	dot := difference.Dot(ray.Direction)
 	hypotenuse := dot*dot - difference.Dot(difference) + s.radius*s.radius
 
 	if hypotenuse < 0 {
-		return math.Inf(+1)
+		return positiveInfinity
 	}
 
 	hypotenuse = math.Sqrt(hypotenuse)
@@ -108,7 +110,7 @@ func sphereIntersects(s *Shape, ray Ray) float64 {
 	if diff := dot + hypotenuse; diff > epsilon {
 		return diff
 	}
-	return math.Inf(+1)
+	return positiveInfinity
 }
 
 func sphereNormal(s *Shape, point Vec3) Vec3 {

@@ -34,7 +34,7 @@ func ClosestIntersection(shapes []*geometry.Shape, ray geometry.Ray) (*geometry.
 	var closest *geometry.Shape
 	bestHit := math.Inf(+1)
 	for _, shape := range shapes {
-		if hit := shape.Intersects(ray); hit > 0 && hit < bestHit {
+		if hit := shape.Intersects(&ray); hit > 0 && hit < bestHit {
 			bestHit = hit
 			closest = shape
 		}
@@ -82,9 +82,11 @@ func CorrectColour(x float64) float64 {
 }
 
 func CorrectColours(v geometry.Vec3) geometry.Vec3 {
-	return geometry.Vec3{CorrectColour(v.X),
+	return geometry.Vec3{
+		CorrectColour(v.X),
 		CorrectColour(v.Y),
-		CorrectColour(v.Z)}
+		CorrectColour(v.Z),
+	}
 }
 
 func mix(a, b geometry.Vec3, factor float64) geometry.Vec3 {
@@ -159,6 +161,7 @@ func Render(scene geometry.Scene) image.Image {
 	var so_far time.Duration
 	var highest, lowest geometry.Vec3
 	var highValue, lowValue float64
+	lowValue = math.Inf(+1)
 	numPixels := scene.Rows * scene.Cols
 	for i := 0; i < numPixels; i++ {
 		// Print progress information every 500 pixels
