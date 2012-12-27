@@ -2,7 +2,6 @@ package geometry
 
 import (
 	"math"
-	"unsafe"
 )
 
 /////////////////////////
@@ -16,32 +15,20 @@ func (v Vec3) Abs() float64 {
 	return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
 }
 
-func (v Vec3) Position() Vec3 {
+func (v Vec3) Truncate() Vec3 {
+	const epsilon = 1e-4
+	v.X = AdjustEpsilon(epsilon, v.X)
+	v.Y = AdjustEpsilon(epsilon, v.Y)
+	v.Z = AdjustEpsilon(epsilon, v.Z)
 	return v
 }
 
-func (v Vec3) Truncate() Vec3 {
-	const epsilon = 1e-4
-	return Vec3{AdjustEpsilon(epsilon, v.X),
-		AdjustEpsilon(epsilon, v.Y),
-		AdjustEpsilon(epsilon, v.Z)}
-}
-
 func (v Vec3) Normalize() Vec3 {
-	// http://en.wikipedia.org/wiki/Fast_inverse_square_root
-	const (
-		magic      = 0x5fe6eb50c7b537a9
-		iterations = 3
-	)
-
-	y := v.X*v.X + v.Y*v.Y + v.Z*v.Z
-	x2 := y / 2
-	i := (*uint64)(unsafe.Pointer(&y))
-	*i = magic - (*i >> 1)
-	for i := 0; i < iterations; i++ {
-		y *= 1.5 - (x2 * y * y)
-	}
-	return Vec3{v.X * y, v.Y * y, v.Z * y}
+	m := math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
+	v.X /= m
+	v.Y /= m
+	v.Z /= m
+	return v
 }
 
 func (v Vec3) Add(other Vec3) Vec3 {
@@ -98,12 +85,14 @@ func (v Vec3) IsZero() bool {
 	return v.X == 0 && v.Y == 0 && v.Z == 0
 }
 
-func (me Vec3) Distance(other Vec3) float64 {
-	return math.Sqrt(me.Distance2(other))
+func (v Vec3) Distance(other Vec3) float64 {
+	return math.Sqrt(v.Distance2(other))
 }
 
-func (me Vec3) Distance2(other Vec3) float64 {
-	dx, dy, dz := me.X-other.X, me.Y-other.Y, me.Z-other.Z
+func (v Vec3) Distance2(other Vec3) float64 {
+	dx := v.X - other.X
+	dy := v.Y - other.Y
+	dz := v.Z - other.Z
 	return dx*dx + dy*dy + dz*dz
 }
 

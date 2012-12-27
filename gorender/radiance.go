@@ -15,10 +15,12 @@ func EmitterSampling(point, normal geometry.Vec3, shapes []*geometry.Shape, rand
 		if !shape.Emission.IsZero() {
 			// It's a light source
 			direction := shape.NormalDir(point).Mult(-1)
-			u := direction.Cross(normal).Normalize()
-			v := direction.Cross(u).Normalize()
+			u := direction.Cross(normal).Normalize().Mult(rand.NormFloat64() * 0.3)
+			v := direction.Cross(u).Normalize().Mult(rand.NormFloat64() * 0.3)
 
-			direction = direction.Add(u.Mult(rand.NormFloat64() * 0.3)).Add(v.Mult(rand.NormFloat64() * 0.3))
+			direction.X += u.X + v.X
+			direction.Y += u.Y + v.Y
+			direction.Z += u.Z + v.Z
 			ray := geometry.Ray{point, direction.Normalize()}
 
 			if object, distance := ClosestIntersection(shapes, ray); object == shape {
