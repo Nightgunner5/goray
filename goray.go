@@ -26,6 +26,7 @@ var (
 	bloom    = flag.Int("bloom", 10, "The number of iteration to run the bloom filter")
 	mindepth = flag.Int("depth", 2, "The minimum recursion depth used for the rays")
 	rays     = flag.Int("rays", 10, "The number of rays used to sample each pixel")
+	caustics = flag.Int("caustics", 256, "The depth of the caustic photon tracing before the render")
 	gamma    = flag.Float64("gamma", 2.2, "The factor to use for gamma correction")
 	// Profiling information
 	cpuprofile = flag.String("cpuprofile", "", "Write cpu profile informaion to file")
@@ -38,6 +39,7 @@ func main() {
 	rand.Seed(*seed)
 
 	gorender.Config.NumRays = *rays
+	gorender.Config.Caustics = *caustics
 	gorender.Config.BloomFactor = *bloom
 	gorender.Config.MinDepth = *mindepth
 	gorender.Config.GammaFactor = *gamma

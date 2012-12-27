@@ -39,7 +39,6 @@ func CausticPhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometr
 			if normal.Dot(reverse) < 0 {
 				outgoing = normal.Mult(-1)
 			}
-			outgoing = outgoing
 			//fmt.Println("Hit something else!")
 			if depth > 0 {
 				strength := colour.Mult(1.0 / (alpha + distance))
@@ -47,11 +46,11 @@ func CausticPhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometr
 			}
 
 			// Specular objects makes reflections
-			/*if shape.Material() == geometry.SPECULAR {
+			if shape.Material == geometry.SPECULAR {
 				reflection := ray.Direction.Sub(normal.Mult(2 * outgoing.Dot(ray.Direction)))
 				reflectedRay := geometry.Ray{impact, reflection.Normalize()}
 				CausticPhoton(scene, shape, reflectedRay, colour, result, alpha*0.9, depth+1, rand)
-			}*/
+			}
 
 			// Refracting objects makes refractions
 			if shape.Material == geometry.REFRACTIVE {
@@ -108,13 +107,11 @@ func CausticPhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometr
 				if totalReflection {
 					reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
 					reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-					reflectedRay = reflectedRay
-					//CausticPhoton(scene, emitter, reflectedRay, colour, result, alpha*0.9, depth+1)
+					CausticPhoton(scene, emitter, reflectedRay, colour, result, alpha*0.9, depth+1, rand)
 				} else {
 					reflectionDirection := ray.Direction.Sub(normal.Mult(2 * normal.Dot(ray.Direction)))
 					reflectedRay := geometry.Ray{impact, reflectionDirection.Normalize()}
-					reflectedRay = reflectedRay
-					//CausticPhoton(scene, emitter, reflectedRay, colour.Mult(R), result, alpha*0.9, depth+1)
+					CausticPhoton(scene, emitter, reflectedRay, colour.Mult(R), result, alpha*0.9, depth+1, rand)
 
 					nDotI := normal.Dot(ray.Direction)
 					trasmittedDirection := ray.Direction.Mult(factor)
@@ -149,8 +146,6 @@ func DiffusePhoton(scene []*geometry.Shape, emitter *geometry.Shape, ray geometr
 			if normal.Dot(reverse) < 0 {
 				outgoing = normal.Mult(-1)
 			}
-			outgoing = outgoing
-			//fmt.Println("Hit something else!")
 			strength := colour.Mult(alpha / (1 + distance))
 			result <- PhotonHit{impact, strength, ray.Direction, uint8(depth)}
 
@@ -242,7 +237,7 @@ func PhotonMapping(scene []*geometry.Shape, factor int, rayFunc RayFunc) ([]geom
 var causticPhotons map[geometry.Vec3]PhotonHit
 
 func GenerateMaps(scene []*geometry.Shape) (*kd.KDNode, *kd.KDNode) {
-	caustics, caustics_ := PhotonMapping(scene, 128, CausticPhoton)
+	caustics, caustics_ := PhotonMapping(scene, Config.Caustics, CausticPhoton)
 	globals, _ := PhotonMapping(scene, 16, DiffusePhoton)
 	fmt.Printf("Building KD-trees ...")
 

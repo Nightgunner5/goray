@@ -127,6 +127,7 @@ var Config struct {
 	Chunks      int
 	GammaFactor float64
 	BloomFactor int
+	Caustics    int
 }
 
 func Render(scene geometry.Scene) image.Image {
