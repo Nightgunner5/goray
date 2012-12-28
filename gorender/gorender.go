@@ -62,15 +62,19 @@ func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, cau
 		for x := 0; x < scene.Cols; x++ {
 			px = -scene.Width + scene.Width*2*float64(x)/float64(scene.Cols)
 			var colourSamples geometry.Vec3
-			for sample := 0; sample < samples; sample++ {
-				dy, dx = rand.Float64()*scene.PixH, rand.Float64()*scene.PixW
-				direction = geometry.Vec3{
-					px + dx - scene.Camera.Origin.X,
-					py + dy - scene.Camera.Origin.Y,
-					-scene.Camera.Origin.Z}.Normalize()
+			if x >= Config.Skip.Left && x < scene.Cols-Config.Skip.Right &&
+				y >= Config.Skip.Top && y < scene.Rows-Config.Skip.Bottom {
+				for sample := 0; sample < samples; sample++ {
+					dy, dx = rand.Float64()*scene.PixH, rand.Float64()*scene.PixW
+					direction = geometry.Vec3{
+						px + dx - scene.Camera.Origin.X,
+						py + dy - scene.Camera.Origin.Y,
+						-scene.Camera.Origin.Z,
+					}.Normalize()
 
-				contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0, rand)
-				colourSamples.AddInPlace(contribution)
+					contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0, rand)
+					colourSamples.AddInPlace(contribution)
+				}
 			}
 			results <- Result{x, y, colourSamples.Mult(1.0 / float64(samples))}
 		}
@@ -130,6 +134,10 @@ var Config struct {
 	GammaFactor float64
 	BloomFactor int
 	Caustics    int
+
+	Skip struct {
+		Top, Left, Right, Bottom int
+	}
 }
 
 func Render(scene geometry.Scene) image.Image {

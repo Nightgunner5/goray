@@ -28,6 +28,12 @@ var (
 	rays     = flag.Int("rays", 10, "The number of rays used to sample each pixel")
 	caustics = flag.Int("caustics", 256, "The depth of the caustic photon tracing before the render")
 	gamma    = flag.Float64("gamma", 2.2, "The factor to use for gamma correction")
+
+	skipTop    = flag.Int("skiptop", 0, "The number of pixels to skip calculating starting from the top of the image")
+	skipLeft   = flag.Int("skipleft", 0, "The number of pixels to skip calculating starting from the left side of the image")
+	skipRight  = flag.Int("skipright", 0, "The number of pixels to skip calculating starting from the right side of the image")
+	skipBottom = flag.Int("skipbottom", 0, "The number of pixels to skip calculating starting from the bottom of the image")
+
 	// Profiling information
 	cpuprofile = flag.String("cpuprofile", "", "Write cpu profile informaion to file")
 	memprofile = flag.String("memprofile", "", "Write memory profile informaion to file")
@@ -44,6 +50,11 @@ func main() {
 	gorender.Config.MinDepth = *mindepth
 	gorender.Config.GammaFactor = *gamma
 
+	gorender.Config.Skip.Top = *skipTop
+	gorender.Config.Skip.Left = *skipLeft
+	gorender.Config.Skip.Right = *skipRight
+	gorender.Config.Skip.Bottom = *skipBottom
+
 	wantedCPUs := *cores
 	if wantedCPUs < 1 {
 		wantedCPUs = 1
@@ -52,8 +63,7 @@ func main() {
 	runtime.GOMAXPROCS(wantedCPUs)
 
 	if wantedCPUs > *chunks {
-		*chunks = wantedCPUs * 2
-		log.Printf("Warning: changed chunks to %d to accomodate cores setting", *chunks)
+		log.Print("Warning: chunks setting is lower than the number of cores - not all cores will be used")
 	}
 
 	if *rows%*chunks != 0 {

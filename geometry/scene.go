@@ -79,14 +79,14 @@ func ParseScene(filename string, width, height, fov float64, cols, rows int) Sce
 		SPECULAR,            // material
 	))
 
-	// central glass cube
+	/*// central glass cube
 	shapes = append(shapes, Cube(
 		0.9,                  // radius
 		Vec3{-0.5, -1.1, -2}, // position
 		Vec3{0, 0, 0},        // emission
 		Vec3{1, 1, 1},        // colour
 		REFRACTIVE,           // material
-	))
+	))*/
 
 	// right rear plastic sphere
 	shapes = append(shapes, Sphere(
