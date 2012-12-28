@@ -30,9 +30,9 @@ func clearLine() {
 	fmt.Printf("\r                                                                                                          \r")
 }
 
-func ClosestIntersection(shapes []*geometry.Shape, ray geometry.Ray) (*geometry.Shape, float64) {
+func ClosestIntersection(shapes []*geometry.Shape, ray geometry.Ray) (*geometry.Shape, geometry.Float) {
 	var closest *geometry.Shape
-	bestHit := math.Inf(+1)
+	bestHit := geometry.Float(math.Inf(+1))
 	for _, shape := range shapes {
 		if hit := shape.Intersects(&ray); hit > 0 && hit < bestHit {
 			bestHit = hit
@@ -52,37 +52,37 @@ const (
 	GLASS = 1.5
 )
 
-func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap, causticsMap *kd.KDNode, start, rows int, rand *rand.Rand) {
+func MonteCarloPixel(results chan Result, scene *geometry.Scene, diffuseMap /*, causticsMap*/ *kd.KDNode, start, rows int, rand *rand.Rand) {
 	samples := Config.NumRays
-	var px, py, dy, dx float64
+	var px, py, dy, dx geometry.Float
 	var direction, contribution geometry.Vec3
 
 	for y := start; y < start+rows; y++ {
-		py = scene.Height - scene.Height*2*float64(y)/float64(scene.Rows)
+		py = scene.Height - scene.Height*2*geometry.Float(y)/geometry.Float(scene.Rows)
 		for x := 0; x < scene.Cols; x++ {
-			px = -scene.Width + scene.Width*2*float64(x)/float64(scene.Cols)
+			px = -scene.Width + scene.Width*2*geometry.Float(x)/geometry.Float(scene.Cols)
 			var colourSamples geometry.Vec3
 			if x >= Config.Skip.Left && x < scene.Cols-Config.Skip.Right &&
 				y >= Config.Skip.Top && y < scene.Rows-Config.Skip.Bottom {
 				for sample := 0; sample < samples; sample++ {
-					dy, dx = rand.Float64()*scene.PixH, rand.Float64()*scene.PixW
+					dy, dx = geometry.Float(rand.Float32())*scene.PixH, geometry.Float(rand.Float32())*scene.PixW
 					direction = geometry.Vec3{
 						px + dx - scene.Camera.Origin.X,
 						py + dy - scene.Camera.Origin.Y,
 						-scene.Camera.Origin.Z,
 					}.Normalize()
 
-					contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap, causticsMap, 0, 1.0, rand)
+					contribution = Radiance(geometry.Ray{scene.Camera.Origin, direction}, scene, diffuseMap /*causticsMap,*/, 0, 1.0, rand)
 					colourSamples.AddInPlace(contribution)
 				}
 			}
-			results <- Result{x, y, colourSamples.Mult(1.0 / float64(samples))}
+			results <- Result{x, y, colourSamples.Mult(1.0 / geometry.Float(samples))}
 		}
 	}
 }
 
-func CorrectColour(x float64) float64 {
-	return math.Pow(x, 1.0/Config.GammaFactor)*255 + 0.5
+func CorrectColour(x geometry.Float) geometry.Float {
+	return geometry.Float(math.Pow(float64(x), 1.0/Config.GammaFactor)*255 + 0.5)
 }
 
 func CorrectColours(v geometry.Vec3) geometry.Vec3 {
@@ -92,7 +92,7 @@ func CorrectColours(v geometry.Vec3) geometry.Vec3 {
 	return v
 }
 
-func mix(a, b geometry.Vec3, factor float64) geometry.Vec3 {
+func mix(a, b geometry.Vec3, factor geometry.Float) geometry.Vec3 {
 	a.X = (1-factor)*a.X + factor*b.X
 	a.Y = (1-factor)*a.Y + factor*b.Y
 	a.Z = (1-factor)*a.Z + factor*b.Z
@@ -106,7 +106,7 @@ func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
 	}
 
 	const box_width = 2
-	factor := 1.0 / math.Pow(2*box_width+1, 2)
+	factor := geometry.Float(1.0 / math.Pow(2*box_width+1, 2))
 
 	source := img
 	for iteration := 0; iteration < depth; iteration++ {
@@ -147,9 +147,10 @@ func Render(scene geometry.Scene) image.Image {
 	workload := scene.Rows / Config.Chunks
 
 	startTime := time.Now()
-	globals, caustics := GenerateMaps(scene.Objects)
+	globals /*, caustics*/ := GenerateMaps(scene.Objects)
 	fmt.Println(" Done!")
-	fmt.Printf("Diffuse Map depth: %v Caustics Map depth: %v\n", globals.Depth(), caustics.Depth())
+	//fmt.Printf("Diffuse Map depth: %v Caustics Map depth: %v\n", globals.Depth(), caustics.Depth())
+	fmt.Printf("Diffuse Map depth: %v\n", globals.Depth())
 	fmt.Printf("Photon Maps Done. Generation took: ")
 	stopTime := time.Now()
 	PrintDuration(stopTime.Sub(startTime))
@@ -157,7 +158,7 @@ func Render(scene geometry.Scene) image.Image {
 
 	startTime = time.Now()
 	for y := 0; y < scene.Rows; y += workload {
-		go MonteCarloPixel(pixels, &scene, globals, caustics, y, workload, rand.New(rand.NewSource(rand.Int63())))
+		go MonteCarloPixel(pixels, &scene, globals /*caustics,*/, y, workload, rand.New(rand.NewSource(rand.Int63())))
 	}
 
 	// Write targets for after effects
@@ -171,8 +172,7 @@ func Render(scene geometry.Scene) image.Image {
 	// Collect results
 	var so_far time.Duration
 	var highest, lowest geometry.Vec3
-	var highValue, lowValue float64
-	lowValue = math.Inf(+1)
+	highValue, lowValue := geometry.Float(0), geometry.Float(math.Inf(+1))
 	numPixels := scene.Rows * scene.Cols
 	for i := 0; i < numPixels; i++ {
 		// Print progress information every 500 pixels

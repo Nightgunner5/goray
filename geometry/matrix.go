@@ -8,7 +8,7 @@ import (
 // Matrix
 /////////////////////////
 type Mat4 struct {
-	matrix [16]float64
+	matrix [16]Float
 }
 
 func (m Mat4) Mult(v *Vec3) Vec3 {
@@ -19,10 +19,10 @@ func (m Mat4) Mult(v *Vec3) Vec3 {
 	}
 }
 
-func RotateVector(a float64, axis *Vec3, vec *Vec3) Vec3 {
-	sin, cos := math.Sin(a), math.Cos(a)
+func RotateVector(angle Float, axis *Vec3, vec *Vec3) Vec3 {
+	sin, cos := Float(math.Sin(float64(angle))), Float(math.Cos(float64(angle)))
 	x, y, z := axis.X, axis.Y, axis.Z
-	m := [16]float64{
+	m := [16]Float{
 		cos + x*x*(1-cos), x*y*(1-cos) - x*sin, x*z*(1-cos) + y*sin, 0,
 		y*x*(1-cos) + z*sin, cos + y*y*(1-cos), y*z*(1-cos) - x*sin, 0,
 		z*x*(1-cos) - y*sin, z*y*(1-cos) + x*sin, cos + z*z*(1-cos), 0,

@@ -26,8 +26,8 @@ var (
 	bloom    = flag.Int("bloom", 10, "The number of iteration to run the bloom filter")
 	mindepth = flag.Int("depth", 2, "The minimum recursion depth used for the rays")
 	rays     = flag.Int("rays", 10, "The number of rays used to sample each pixel")
-	caustics = flag.Int("caustics", 256, "The depth of the caustic photon tracing before the render")
-	gamma    = flag.Float64("gamma", 2.2, "The factor to use for gamma correction")
+	//caustics = flag.Int("caustics", 256, "The depth of the caustic photon tracing before the render")
+	gamma = flag.Float64("gamma", 2.2, "The factor to use for gamma correction")
 
 	skipTop    = flag.Int("skiptop", 0, "The number of pixels to skip calculating starting from the top of the image")
 	skipLeft   = flag.Int("skipleft", 0, "The number of pixels to skip calculating starting from the left side of the image")
@@ -45,7 +45,7 @@ func main() {
 	rand.Seed(*seed)
 
 	gorender.Config.NumRays = *rays
-	gorender.Config.Caustics = *caustics
+	//gorender.Config.Caustics = *caustics
 	gorender.Config.BloomFactor = *bloom
 	gorender.Config.MinDepth = *mindepth
 	gorender.Config.GammaFactor = *gamma
@@ -96,9 +96,9 @@ func main() {
 	fmt.Printf("Rendering %vx%v sized image with %v rays per pixel to %v\n", *cols, *rows, *rays, *output)
 
 	// "Real world" frustrum
-	height := 2.0
-	width := height * (float64(*cols) / float64(*rows)) // Aspect ratio?
-	angle := math.Pi * float64(*fov) / 180.0
+	height := geometry.Float(2.0)
+	width := height * (geometry.Float(*cols) / geometry.Float(*rows)) // Aspect ratio?
+	angle := math.Pi * geometry.Float(*fov) / 180.0
 
 	scene := geometry.ParseScene(*input, width, height, angle, *cols, *rows)
 	img := gorender.Render(scene)
