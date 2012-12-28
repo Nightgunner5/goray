@@ -82,15 +82,17 @@ func CorrectColour(x float64) float64 {
 }
 
 func CorrectColours(v geometry.Vec3) geometry.Vec3 {
-	return geometry.Vec3{
-		CorrectColour(v.X),
-		CorrectColour(v.Y),
-		CorrectColour(v.Z),
-	}
+	v.X = CorrectColour(v.X)
+	v.Y = CorrectColour(v.Y)
+	v.Z = CorrectColour(v.Z)
+	return v
 }
 
 func mix(a, b geometry.Vec3, factor float64) geometry.Vec3 {
-	return a.Mult(1 - factor).Add(b.Mult(factor))
+	a.X = (1-factor)*a.X + factor*b.X
+	a.Y = (1-factor)*a.Y + factor*b.Y
+	a.Z = (1-factor)*a.Z + factor*b.Z
+	return a
 }
 
 func BloomFilter(img [][]geometry.Vec3, depth int) [][]geometry.Vec3 {
